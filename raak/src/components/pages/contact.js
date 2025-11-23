@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 // TODO: testen versturen mail naar raak
-// TODO: knop versturen uitschakelen als de velden niet ingevuld zijn
 // Contact Page Component
 function ContactPage() {
   const [formData, setFormData] = useState({ naam: '', email: '', onderwerp: '', bericht: '' });

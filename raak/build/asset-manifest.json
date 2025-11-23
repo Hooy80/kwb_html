@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/raak/static/css/main.e605aed2.css",
-    "main.js": "/raak/static/js/main.fd85fcc0.js",
+    "main.js": "/raak/static/js/main.10b56420.js",
     "index.html": "/raak/index.html",
     "main.e605aed2.css.map": "/raak/static/css/main.e605aed2.css.map",
-    "main.fd85fcc0.js.map": "/raak/static/js/main.fd85fcc0.js.map"
+    "main.10b56420.js.map": "/raak/static/js/main.10b56420.js.map"
   },
   "entrypoints": [
     "static/css/main.e605aed2.css",
-    "static/js/main.fd85fcc0.js"
+    "static/js/main.10b56420.js"
   ]
 }

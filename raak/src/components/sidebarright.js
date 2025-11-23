@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import SmakelijkWandelenPage from './activiteiten/smakelijk_wandelen';
 
 // Sidebar Right Component
 function SidebarRight() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isInschrijvingOpen, setIsInschrijvingOpen] = useState(false);
   const [nextActivity, setNextActivity] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +55,11 @@ function SidebarRight() {
 
   const imagePath = getImagePath(nextActivity);
 
+  // Check of activiteit "Smakelijk Wandelen" is
+  const isSmakelijkWandelen = nextActivity &&
+    nextActivity.name.toLowerCase().includes('smakelijk') &&
+    nextActivity.name.toLowerCase().includes('wandelen');
+
   return (
     <>
       <aside className="sidebar sidebar-right">
@@ -67,8 +74,34 @@ function SidebarRight() {
             e.target.parentElement.innerHTML = `<p style="padding: 20px; text-align: center;">${nextActivity.name}</p>`;
           }}
         />
+
+        {/* Inschrijven knop voor Smakelijk Wandelen */}
+        {isSmakelijkWandelen && (
+          <button
+            className="btn-inschrijven"
+            onClick={() => setIsInschrijvingOpen(true)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              marginTop: '10px',
+              background: '#ebe24c',
+              color: '#2c3e50',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'opacity 0.3s'
+            }}
+            onMouseOver={(e) => e.target.style.opacity = '0.9'}
+            onMouseOut={(e) => e.target.style.opacity = '1'}
+          >
+            Inschrijven
+          </button>
+        )}
       </aside>
 
+      {/* Lightbox voor foto */}
       {isOpen && (
         <div className="lightbox-overlay" onClick={() => setIsOpen(false)}>
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
@@ -78,6 +111,23 @@ function SidebarRight() {
               alt={nextActivity.name}
             />
             <p style={{ color: 'white', marginTop: '10px', textAlign: 'center' }}>{nextActivity.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal voor inschrijving Smakelijk Wandelen */}
+      {isInschrijvingOpen && (
+        <div className="lightbox-overlay" onClick={() => setIsInschrijvingOpen(false)}>
+          <div className="lightbox-content modal-form" onClick={(e) => e.stopPropagation()} style={{
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            background: 'white',
+            padding: '20px',
+            borderRadius: '10px'
+          }}>
+            <button className="lightbox-close" onClick={() => setIsInschrijvingOpen(false)}>×</button>
+            <SmakelijkWandelenPage />
           </div>
         </div>
       )}

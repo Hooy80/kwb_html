@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="../images/raak_druppel_001.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ebe24c" />
+    <meta name="description" content="Admin Panel - RAAK Achterbos" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="admin.css" />
+    <title>Bestuur - RAAK Achterbos</title>
+  </head>
+
+  <body>
+    <noscript>Je moet JavaScript aanzetten om deze admin panel te gebruiken.</noscript>
+
+    <!-- Login scherm (toon als niet ingelogd) -->
+    <div id="login-container" class="login-container">
+      <div class="login-box">
+        <img src="../images/raak_druppel_001.png" alt="RAAK Logo" class="login-logo" />
+        <h1>Bestuur Admin</h1>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">Gebruikersnaam</label>
+            <input type="text" id="username" name="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Wachtwoord</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <button type="submit" class="btn-primary">Inloggen</button>
+          <p id="login-error" class="error-message"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin panel (toon na login) -->
+    <div id="admin-container" class="admin-container" style="display: none;">
+      <!-- Header -->
+      <header class="admin-header">
+        <div class="header-left">
+          <img src="../images/raak_druppel_001.png" alt="RAAK Logo" class="logo" />
+          <h1>RAAK Bestuur Admin</h1>
+        </div>
+        <div class="header-right">
+          <span id="user-name">Admin</span>
+          <button id="logout-btn" class="btn-logout">Uitloggen</button>
+        </div>
+      </header>
+
+      <!-- Main content -->
+      <div class="admin-layout">
+        <!-- Sidebar navigatie -->
+        <aside class="admin-sidebar">
+          <nav>
+            <ul>
+              <li><a href="#dashboard" class="nav-link active" data-page="dashboard">
+                  <i class="fa fa-dashboard"></i> Dashboard
+                </a></li>
+              <li><a href="#activiteiten" class="nav-link" data-page="activiteiten">
+                  <i class="fa fa-calendar"></i> Activiteiten
+                </a></li>
+              <li><a href="#berichten" class="nav-link" data-page="berichten">
+                  <i class="fa fa-envelope"></i> Berichten
+                </a></li>
+              <li><a href="#fotos" class="nav-link" data-page="fotos">
+                  <i class="fa fa-image"></i> Foto's
+                </a></li>
+              <li><a href="#folders" class="nav-link" data-page="folders">
+                  <i class="fa fa-file-pdf-o"></i> Folders
+                </a></li>
+            </ul>
+          </nav>
+        </aside>
+
+        <!-- Content area -->
+        <main class="admin-content">
+          <!-- Dashboard page -->
+          <div id="page-dashboard" class="admin-page active">
+            <h2>Dashboard</h2>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <i class="fa fa-calendar fa-3x"></i>
+                <h3 id="stat-activities">0</h3>
+                <p>Toekomstige Activiteiten</p>
+              </div>
+              <div class="stat-card">
+                <i class="fa fa-envelope fa-3x"></i>
+                <h3 id="stat-messages">0</h3>
+                <p>Ongelezen Berichten</p>
+              </div>
+              <div class="stat-card">
+                <i class="fa fa-image fa-3x"></i>
+                <h3 id="stat-photos">0</h3>
+                <p>Foto Albums</p>
+              </div>
+              <div class="stat-card">
+                <i class="fa fa-file-pdf-o fa-3x"></i>
+                <h3 id="stat-folders">0</h3>
+                <p>PDF Folders</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activiteiten page -->
+          <div id="page-activiteiten" class="admin-page">
+            <h2>Activiteiten Beheer</h2>
+            <p>Hier komt het activiteiten beheer...</p>
+          </div>
+
+          <!-- Berichten page -->
+          <div id="page-berichten" class="admin-page">
+            <h2>Berichten</h2>
+            <p>Hier komen de contact berichten...</p>
+          </div>
+
+          <!-- Foto's page -->
+          <div id="page-fotos" class="admin-page">
+            <h2>Foto Beheer</h2>
+            <p>Hier komt het foto beheer...</p>
+          </div>
+
+          <!-- Folders page -->
+          <div id="page-folders" class="admin-page">
+            <h2>PDF Folders Beheer</h2>
+            <p>Hier komt het folders beheer...</p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="admin.js"></script>
+  </body>
+
+</html>

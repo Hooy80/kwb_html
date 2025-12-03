@@ -13,19 +13,21 @@ function SmakelijkWandelenPage() {
   useEffect(() => {
     fetch(`${process.env.PUBLIC_URL}/php/calendar.php`)
       .then(res => res.json())
-      .then(activities => {
-        // Zoek Smakelijk Wandelen activiteit van dit jaar
-        const smakelijkActivity = activities.find(a =>
-          a.name.toLowerCase().includes('smakelijk') &&
-          a.name.toLowerCase().includes('wandelen') &&
-          new Date(a.date).getFullYear() === currentYear
-        );
-        if (smakelijkActivity) {
-          setActivityInfo(smakelijkActivity);
+      .then(data => {
+        if (data.success && data.data) {
+          // Zoek Smakelijk Wandelen activiteit met inschrijving = 1
+          const smakelijkActivity = data.data.find(a =>
+            a.name.toLowerCase().includes('smakelijk') &&
+            a.name.toLowerCase().includes('wandelen') &&
+            (a.inschrijving == 1 || a.inschrijving === true || a.inschrijving === "1" || a.inschrijving === "true")
+          );
+          if (smakelijkActivity) {
+            setActivityInfo(smakelijkActivity);
+          }
         }
       })
       .catch(err => console.error('Error loading activity:', err));
-  }, [currentYear]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,7 +76,12 @@ function SmakelijkWandelenPage() {
 
   return (
     <div className="contact-section">
-      <h1>Inschrijving Smakelijk Wandelen {currentYear}</h1>
+      <h1>Inschrijving Smakelijk Wandelen {activityInfo ? new Date(activityInfo.date).getFullYear() : currentYear}</h1>
+      {activityInfo && (
+        <p style={{ textAlign: 'center', marginBottom: '20px', fontSize: '18px', fontWeight: 'bold' }}>
+          {formatDate(activityInfo.date)} - {activityInfo.place}
+        </p>
+      )}
       <form onSubmit={handleSubmit} className="contact-form">
         <label>Naam:</label>
         <input type="text" name="naam" value={formData.naam} onChange={handleChange} required />
@@ -82,10 +89,10 @@ function SmakelijkWandelenPage() {
         <label>E-mail:</label>
         <input type="email" name="email" value={formData.email} onChange={handleChange} required />
 
-        <label>Aantal personen</label>
+        <label>Aantal personen (niet vegi)</label>
         <input type="number" name="aantal_personen" value={formData.aantal_personen} onChange={handleChange} required />
 
-        <label>Aantal vegi</label>
+        <label>Aantal personen vegi</label>
         <input type="number" name="aantal_vegi" value={formData.aantal_vegi} onChange={handleChange} required />
 
         <label>Speciale diëten/allergieën?</label>

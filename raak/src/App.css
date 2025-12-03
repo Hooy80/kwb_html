@@ -129,9 +129,11 @@ body {
 
 .sidebar-right {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 20px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px 15px;
+  gap: 10px;
 }
 
 .sidebar-right img {

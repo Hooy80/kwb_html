@@ -7,7 +7,7 @@ function AboutPage() {
       <h1>Over RAAK Achterbos</h1>
       <p>RAAK Achterbos is een warme, sociaal-culturele vereniging die mensen samenbrengt rond ontmoeting, creativiteit en engagement. Met een brede waaier aan activiteiten voor jong en oud, willen we bijdragen aan een verbonden buurt waar iedereen zich welkom voelt.</p>
       <p>Wat ooit begon als KWB Achterbos, is vandaag geëvolueerd tot een eigentijdse beweging die inspeelt op de noden van onze tijd. De naam RAAK staat voor Rechtvaardig, Actief, Aandachtig en Krachtig—waarden die we dagelijks in praktijk brengen.</p>
-      <p>Onze leden zijn mannen en vrouwen vanaf 18 jaar, afkomstig uit alle hoeken van Mol en daarbuiten. Momenteel telt RAAK Achterbos zo'n 165 leden, verspreid over verschillende generaties. We richten ons op het hele gezin: ouders en kinderen nemen samen deel aan activiteiten die zowel ontspannend als verrijkend zijn.</p>
+      <p>Onze leden zijn mannen en vrouwen vanaf 18 jaar, afkomstig uit alle hoeken van Mol en daarbuiten. Momenteel telt RAAK Achterbos zo'n 90 leden, verspreid over verschillende generaties. We richten ons op het hele gezin: ouders en kinderen nemen samen deel aan activiteiten die zowel ontspannend als verrijkend zijn.</p>
       <p>We geloven in levenslang leren en maatschappelijke betrokkenheid. Daarom organiseren we vormingsavonden, creatieve workshops, buurtprojecten en informatieve momenten rond actuele thema's. Via ons maandblad en onze vernieuwde website blijf je op de hoogte van alles wat leeft in Achterbos.</p>
 
       <h1>Een blik op onze geschiedenis</h1>
@@ -18,6 +18,10 @@ function AboutPage() {
       <h1>Vandaag en morgen</h1>
       <p>Wat toen begon als een beweging voor arbeiders, is vandaag een open vereniging voor iedereen die zich wil inzetten voor een warme, rechtvaardige samenleving. We blijven trouw aan onze roots, maar kijken ook vooruit: met nieuwe digitale initiatieven, inclusieve projecten en een frisse visuele identiteit.</p>
       <p>Elke maand zetten we een stukje geschiedenis 'in de spotlight'—een bijzondere activiteit, een markante gebeurtenis, of een vergeten verhaal uit het archief. Zo verbinden we verleden, heden en toekomst.</p>
+
+      <h1>Activiteit in de spotlight: Vlaamse kermis mei 1960</h1>
+      <p>Mei 1960: Er wordt een Vlaamse kermis georganiseerd ten voordele van de parochiezaal. Ook de Kwb zal zich hiervoor engageren. Dit wil zeggen dat Kwb, net als een aantal andere verenigingen zich al meer dan 50 jaar engageren om te zorgen dat er in onze parochie een goede infrastructuur is voor het (socio—cultureel) verenigingsleven.</p>
+      <img src="./images/mei1960.jpg" alt="Vlaamse kermis mei 1960" />
     </section>
   );
 }

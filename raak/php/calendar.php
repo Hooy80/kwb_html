@@ -19,6 +19,7 @@ try {
             place,
             comment,
             info,
+            inschrijving,
             CASE 
                 WHEN date < CURDATE() THEN 'past'
                 WHEN date = CURDATE() THEN 'today'
@@ -26,7 +27,7 @@ try {
             END as status,
             DATEDIFF(CURDATE(), date) as days_ago
         FROM calendar
-        WHERE date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+        WHERE date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH) OR inschrijving = 1
         ORDER BY date ASC
     ");
     
@@ -61,6 +62,7 @@ try {
             'place' => $activity['place'],
             'comment' => $activity['comment'],
             'info' => $activity['info'],
+            'inschrijving' => (int)$activity['inschrijving'],
             'status' => $activity['status'],
             'daysAgo' => (int)$activity['days_ago'],
             'photoExtension' => $photoExtension,

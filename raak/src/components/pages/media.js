@@ -11,15 +11,17 @@ function MediaPage() {
 
   useEffect(() => {
     if (activeSection === 'fotos') {
-      fetch('/raak/php/pictures.php')
+      fetch('/php/pictures.php')
         .then(res => res.json())
         .then(data => {
           console.log('Loaded folders:', data);
-          setFolders(data);
+          // Sort folders descending by name
+          const sortedFolders = [...data].sort((a, b) => b.name.localeCompare(a.name));
+          setFolders(sortedFolders);
         })
         .catch(err => console.error('Error loading folders:', err));
     } else if (activeSection === 'folders') {
-      fetch('/raak/php/folders.php')
+      fetch('/php/folders.php')
         .then(res => res.json())
         .then(data => {
           console.log('Loaded PDF folders:', data);

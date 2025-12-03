@@ -6,23 +6,35 @@ function SidebarRight() {
   const [isOpen, setIsOpen] = useState(false);
   const [isInschrijvingOpen, setIsInschrijvingOpen] = useState(false);
   const [nextActivity, setNextActivity] = useState(null);
+  const [showInschrijvingButton, setShowInschrijvingButton] = useState(false);
+  const [inschrijvingActivity, setInschrijvingActivity] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Haal de eerstvolgende activiteit op uit de API
     fetch(`${process.env.PUBLIC_URL}/php/calendar.php`)
       .then(response => response.json())
       .then(data => {
-        console.log('API response:', data); // DEBUG
         if (data.success && data.data.length > 0) {
           // Filter alleen toekomstige activiteiten die een foto hebben
           const futureActivitiesWithPhoto = data.data.filter(act =>
             (act.status === 'future' || act.status === 'today') && act.photoFilename
           );
-          console.log('Future activities with photo:', futureActivitiesWithPhoto); // DEBUG
           if (futureActivitiesWithPhoto.length > 0) {
-            setNextActivity(futureActivitiesWithPhoto[0]); // Eerste = dichtsbijzijnde met foto
-            console.log('Selected activity:', futureActivitiesWithPhoto[0]); // DEBUG
+            setNextActivity(futureActivitiesWithPhoto[0]);
+          }
+
+          // Check of er een Smakelijk Wandelen activiteit is met inschrijving = true
+
+          const smakelijkWandelenWithInschrijving = data.data.find(act => {
+            const hasSmakelijk = act.name.toLowerCase().includes('smakelijk');
+            const hasWandelen = act.name.toLowerCase().includes('wandelen');
+            const hasInschrijving = act.inschrijving == 1 || act.inschrijving === true || act.inschrijving === "1" || act.inschrijving === "true";
+            return hasSmakelijk && hasWandelen && hasInschrijving;
+          });
+
+          if (smakelijkWandelenWithInschrijving) {
+            setShowInschrijvingButton(true);
+            setInschrijvingActivity(smakelijkWandelenWithInschrijving);
           }
         }
         setLoading(false);
@@ -37,7 +49,9 @@ function SidebarRight() {
   const getImagePath = (activity) => {
     if (!activity || !activity.photoFilename) return null;
     return `${process.env.PUBLIC_URL}/activities/${activity.photoFilename}`;
-  }; if (loading) {
+  };
+
+  if (loading) {
     return (
       <aside className="sidebar sidebar-right">
         <p style={{ padding: '20px', textAlign: 'center' }}>Laden...</p>
@@ -45,45 +59,32 @@ function SidebarRight() {
     );
   }
 
-  if (!nextActivity) {
-    return (
-      <aside className="sidebar sidebar-right">
-        {/* Geen activiteiten met foto - toon niets */}
-      </aside>
-    );
-  }
-
-  const imagePath = getImagePath(nextActivity);
-
-  // Check of activiteit "Smakelijk Wandelen" is
-  const isSmakelijkWandelen = nextActivity &&
-    nextActivity.name.toLowerCase().includes('smakelijk') &&
-    nextActivity.name.toLowerCase().includes('wandelen');
+  const imagePath = nextActivity ? getImagePath(nextActivity) : null;
 
   return (
     <>
       <aside className="sidebar sidebar-right">
-        <img
-          src={imagePath}
-          alt={nextActivity.name}
-          onClick={() => setIsOpen(true)}
-          style={{ cursor: 'pointer' }}
-          onError={(e) => {
-            // Fallback als foto niet bestaat
-            e.target.style.display = 'none';
-            e.target.parentElement.innerHTML = `<p style="padding: 20px; text-align: center;">${nextActivity.name}</p>`;
-          }}
-        />
+        {nextActivity && imagePath && (
+          <img
+            src={imagePath}
+            alt={nextActivity.name}
+            onClick={() => setIsOpen(true)}
+            style={{ cursor: 'pointer' }}
+            onError={(e) => {
+              // Fallback als foto niet bestaat
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = `<p style="padding: 20px; text-align: center;">${nextActivity.name}</p>`;
+            }}
+          />
+        )}
 
-        {/* Inschrijven knop voor Smakelijk Wandelen */}
-        {isSmakelijkWandelen && (
+        {showInschrijvingButton && inschrijvingActivity && (
           <button
             className="btn-inschrijven"
             onClick={() => setIsInschrijvingOpen(true)}
             style={{
               width: '100%',
               padding: '12px',
-              marginTop: '10px',
               background: '#ebe24c',
               color: '#2c3e50',
               border: 'none',
@@ -96,7 +97,7 @@ function SidebarRight() {
             onMouseOver={(e) => e.target.style.opacity = '0.9'}
             onMouseOut={(e) => e.target.style.opacity = '1'}
           >
-            Inschrijven
+            Inschrijving {inschrijvingActivity.name} {new Date(inschrijvingActivity.date).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
           </button>
         )}
       </aside>

@@ -7,9 +7,10 @@ define('SMTP_PORT', 465);
 define('SMTP_USER', 'info@raakachterbos.be');
 
 // Encrypted wachtwoord - gebruik base64 + XOR encryption met server-specific key
-// Om wachtwoord te encrypten: base64_encode(encrypt_string('jouw_wachtwoord', $_SERVER['SERVER_NAME']))
+// Om wachtwoord te encrypten: base64_encode(encrypt_string('jouw_wachtwoord', 'raakachterbos.be'))
+// IMPORTANT: Always use 'raakachterbos.be' (without www) for consistency
 define('SMTP_PASS_ENCRYPTED', 'Q1QiAz4DCBgDH1JaEQ==');
-define('SMTP_ENCRYPTION_KEY', 'raak_smtp_' . substr(md5($_SERVER['SERVER_NAME'] ?? 'raakachterbos.be'), 0, 16));
+define('SMTP_ENCRYPTION_KEY', 'raak_smtp_' . substr(md5('raakachterbos.be'), 0, 16));
 
 define('SMTP_FROM', 'info@raakachterbos.be');
 define('SMTP_FROM_NAME', 'RAAK Achterbos');

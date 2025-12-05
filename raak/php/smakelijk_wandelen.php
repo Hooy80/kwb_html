@@ -25,6 +25,7 @@ $email = htmlspecialchars($data['email']);
 $aantal_personen = htmlspecialchars($data['aantal_personen']);
 $aantal_vegi = htmlspecialchars($data['aantal_vegi']);
 $opmerking = htmlspecialchars($data['opmerking']);
+$mail = isset($data['mail']) ? (int)$data['mail'] : 0;
 
 // Valideer email
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -62,10 +63,21 @@ try {
     $id_act = $activity['id'];
     $onderwerp = "Inschrijving smakelijk wandelen " . $currentYear;
     
+    // Check of email al bestaat, update mail kolom indien nodig
+    $stmtCheck = $pdo->prepare("SELECT id FROM smakelijk_wandelen WHERE email = :email");
+    $stmtCheck->execute([':email' => $email]);
+    $existing = $stmtCheck->fetch();
+    
+    if ($existing) {
+        // Update mail kolom voor bestaand email adres
+        $stmtUpdateMail = $pdo->prepare("UPDATE smakelijk_wandelen SET mail = :mail WHERE email = :email");
+        $stmtUpdateMail->execute([':mail' => $mail, ':email' => $email]);
+    }
+    
     // Sla inschrijving op in database
     $stmt = $pdo->prepare("
-        INSERT INTO smakelijk_wandelen (id_act, naam, email, aantal_personen, aantal_vegi, opmerking, inschrijfdatum)
-        VALUES (:id_act, :naam, :email, :aantal_personen, :aantal_vegi, :opmerking, NOW())
+        INSERT INTO smakelijk_wandelen (id_act, naam, email, aantal_personen, aantal_vegi, opmerking, mail, inschrijfdatum)
+        VALUES (:id_act, :naam, :email, :aantal_personen, :aantal_vegi, :opmerking, :mail, NOW())
     ");
     
     $stmt->execute([
@@ -74,7 +86,8 @@ try {
         ':email' => $email,
         ':aantal_personen' => $aantal_personen,
         ':aantal_vegi' => $aantal_vegi,
-        ':opmerking' => $opmerking
+        ':opmerking' => $opmerking,
+        ':mail' => $mail
     ]);
     
     // Probeer ook email te versturen (optioneel)

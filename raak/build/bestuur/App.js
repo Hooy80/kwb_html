@@ -175,6 +175,7 @@ function showAdminPanel() {
     const activiteitenLink = document.querySelector('[data-page="activiteiten"]');
     const inschrijvingenLink = document.querySelector('[data-page="inschrijvingen"]');
     const berichtenLink = document.querySelector('[data-page="berichten"]');
+    const mailinglijstLink = document.querySelector('[data-page="mailinglijst"]');
     const gebruikersLink = document.querySelector('[data-page="gebruikers"]');
 
     if (currentUser.functie === 'inschrijving') {
@@ -183,16 +184,18 @@ function showAdminPanel() {
         if (activiteitenLink) activiteitenLink.parentElement.style.display = 'none';
         if (inschrijvingenLink) inschrijvingenLink.parentElement.style.display = 'block';
         if (berichtenLink) berichtenLink.parentElement.style.display = 'none';
+        if (mailinglijstLink) mailinglijstLink.parentElement.style.display = 'none';
         if (gebruikersLink) gebruikersLink.parentElement.style.display = 'none';
 
         // Navigeer direct naar inschrijvingen
         setTimeout(() => navigateToPage('inschrijvingen'), 100);
     } else if (currentUser.functie === 'wijkmeester') {
-        // Wijkmeester: alles behalve berichten
+        // Wijkmeester: alles behalve berichten en mailinglijst
         if (dashboardLink) dashboardLink.parentElement.style.display = 'block';
         if (activiteitenLink) activiteitenLink.parentElement.style.display = 'block';
         if (inschrijvingenLink) inschrijvingenLink.parentElement.style.display = 'block';
         if (berichtenLink) berichtenLink.parentElement.style.display = 'none';
+        if (mailinglijstLink) mailinglijstLink.parentElement.style.display = 'none';
         if (gebruikersLink) gebruikersLink.parentElement.style.display = 'block';
     } else {
         // Admin en bestuur: alles
@@ -200,6 +203,7 @@ function showAdminPanel() {
         if (activiteitenLink) activiteitenLink.parentElement.style.display = 'block';
         if (inschrijvingenLink) inschrijvingenLink.parentElement.style.display = 'block';
         if (berichtenLink) berichtenLink.parentElement.style.display = 'block';
+        if (mailinglijstLink) mailinglijstLink.parentElement.style.display = 'block';
         if (gebruikersLink) gebruikersLink.parentElement.style.display = 'block';
     }
 }
@@ -235,6 +239,9 @@ function navigateToPage(page) {
             break;
         case 'berichten':
             loadBerichten();
+            break;
+        case 'mailinglijst':
+            loadMailinglijst();
             break;
         case 'fotos':
             loadFotos();
@@ -1633,4 +1640,98 @@ function openInschrijvingFormulier(formName) {
     };
 
     document.body.appendChild(overlay);
+}
+
+// Load mailinglijst
+function loadMailinglijst() {
+    // Haal lijst van activiteiten op
+    fetch('/php/mailinglijst.php?action=list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('mailinglijst-activiteiten');
+
+                if (data.activiteiten.length === 0) {
+                    container.innerHTML = '<p>Geen activiteiten met inschrijvingen gevonden.</p>';
+                    return;
+                }
+
+                let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">';
+                data.activiteiten.forEach(activiteit => {
+                    html += `
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f5f5f5; border-radius: 5px; cursor: pointer;">
+                            <input type="checkbox" class="activiteit-checkbox" value="${activiteit}" style="width: auto; margin: 0;">
+                            <span>${activiteit}</span>
+                        </label>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                document.getElementById('mailinglijst-activiteiten').innerHTML = '<p class="error-message">' + data.error + '</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading mailinglijst:', error);
+            document.getElementById('mailinglijst-activiteiten').innerHTML = '<p class="error-message">Fout bij laden activiteiten</p>';
+        });
+
+    // Event listener voor ophalen button
+    document.getElementById('mailinglijst-ophalen-btn').onclick = loadMailingEmails;
+    document.getElementById('copy-emails-btn').onclick = copyEmailsToClipboard;
+    document.getElementById('open-mail-client-btn').onclick = openInMailClient;
+}
+
+function loadMailingEmails() {
+    const checkboxes = document.querySelectorAll('.activiteit-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        alert('Selecteer minimaal één activiteit');
+        return;
+    }
+
+    const activiteiten = Array.from(checkboxes).map(cb => cb.value).join(',');
+
+    fetch(`/php/mailinglijst.php?action=emails&activiteiten=${encodeURIComponent(activiteiten)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('email-count').textContent = data.count;
+
+                if (data.count === 0) {
+                    document.getElementById('mailinglijst-emails').innerHTML = '<p>Geen email adressen gevonden voor de geselecteerde activiteiten.</p>';
+                } else {
+                    document.getElementById('mailinglijst-emails').innerHTML = data.emails.join('<br>');
+                }
+
+                document.getElementById('mailinglijst-result-card').style.display = 'block';
+            } else {
+                alert('Fout: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading emails:', error);
+            alert('Fout bij ophalen email adressen');
+        });
+}
+
+function copyEmailsToClipboard() {
+    const emailsDiv = document.getElementById('mailinglijst-emails');
+    const emails = emailsDiv.textContent.replace(/<br>/g, '\n');
+
+    navigator.clipboard.writeText(emails).then(() => {
+        alert('Email adressen gekopieerd naar klembord!');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('Kopiëren mislukt. Selecteer handmatig de emails en kopieer ze.');
+    });
+}
+
+function openInMailClient() {
+    const emailsDiv = document.getElementById('mailinglijst-emails');
+    const emails = emailsDiv.textContent.split('\n').filter(e => e.trim()).join(';');
+
+    if (emails) {
+        window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}`;
+    }
 }

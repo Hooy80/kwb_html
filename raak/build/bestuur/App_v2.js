@@ -1787,10 +1787,10 @@ async function sendMailingEmail(event) {
 
         console.log('Response status:', response.status);
         console.log('Response ok:', response.ok);
-
+        
         const responseText = await response.text();
         console.log('Response text:', responseText);
-
+        
         let data;
         try {
             data = JSON.parse(responseText);

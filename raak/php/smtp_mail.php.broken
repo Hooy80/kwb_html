@@ -3,16 +3,19 @@
 require_once 'smtp_config.php';
 
 function sendEmail($fromEmail, $fromName, $to, $subject, $message, $replyTo = null, $bccArray = []) {
+    // Gebruik configuratie uit smtp_config.php
     $smtp_host = SMTP_HOST;
     $smtp_port = SMTP_PORT;
     $smtp_user = SMTP_USER;
-    $smtp_pass = get_smtp_password();
+    $smtp_pass = get_smtp_password(); // Decrypt wachtwoord
     $from = $fromEmail;
     
+    // Use provided reply-to or default to from address
     if ($replyTo === null) {
         $replyTo = $fromEmail;
     }
     
+    // Open SSL socket connectie
     $socket = @stream_socket_client(
         "ssl://{$smtp_host}:{$smtp_port}",
         $errno,
@@ -31,24 +34,30 @@ function sendEmail($fromEmail, $fromName, $to, $subject, $message, $replyTo = nu
         return false;
     }
     
+    // Helper functie om SMTP response te lezen
     $read = function() use ($socket) {
         return fgets($socket, 515);
     };
     
+    // Helper functie om SMTP command te versturen
     $send = function($cmd) use ($socket) {
         fputs($socket, $cmd . "\r\n");
     };
     
     try {
+        // Lees server greeting
         $greeting = $read();
         
+        // EHLO
         $ehloHost = $_SERVER['SERVER_NAME'] ?? 'raakachterbos.be';
         $send("EHLO $ehloHost");
         
+        // Lees multi-line EHLO response
         while ($line = fgets($socket, 515)) {
             if (substr($line, 3, 1) === ' ') break;
         }
         
+        // AUTH LOGIN
         $send("AUTH LOGIN");
         $authResp = $read();
         
@@ -63,12 +72,30 @@ function sendEmail($fromEmail, $fromName, $to, $subject, $message, $replyTo = nu
             return false;
         }
         
+        // MAIL FROM
+        debugLog("Sending MAIL FROM: <$from>");
+        $send("MAIL FROM: <{$from}>");
+        $fromResp = $read();
+        debugLog("MAIL FROM response: " . trim($fromResp));
+        
+        // RCPT TO (main recipient)
+        debugLog("Sending RCPT TO: <$to>");
+        $send("RCPT TO: <{$to}>");
+        $toResp = $read();
+        debugLog("RCPT TO response: " . trim($toResp));
+        
+        // RCPT TO (BCC recipients)
+        debugLog("Processing BCC array with " . count($bccArray) . " recipients");
+        
+        // MAIL FROM
         $send("MAIL FROM: <{$from}>");
         $fromResp = $read();
         
+        // RCPT TO (main recipient)
         $send("RCPT TO: <{$to}>");
         $toResp = $read();
         
+        // RCPT TO (BCC recipients)
         foreach ($bccArray as $bccEmail) {
             $bccEmail = trim($bccEmail);
             if (!empty($bccEmail)) {
@@ -77,20 +104,23 @@ function sendEmail($fromEmail, $fromName, $to, $subject, $message, $replyTo = nu
             }
         }
         
+        // DATA
         $send("DATA");
         $dataResp = $read();
+        debugLog("SMTP: QUIT response: $quitResp");
         
-        $headers = "From: {$fromName} <{$from}>\r\n";
-        $headers .= "Reply-To: {$replyTo}\r\n";
-        $headers .= "To: {$to}\r\n";
-        $headers .= "Subject: {$subject}\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "Content-Transfer-Encoding: 8bit\r\n";
+        fclose($socket);
+        debugLog("<<< sendEmail() SUCCESS - returning TRUE");
+        return true;
         
+    } catch (Exception $e) {
+        debugLog("!!! EXCEPTION in sendEmail(): " . $e->getMessage());
+        if (is_resource($socket)) {
+            fclose($socket);
         $send($headers . "\r\n" . $message . "\r\n.");
         $sendResp = $read();
         
+        // QUIT
         $send("QUIT");
         $quitResp = $read();
         
@@ -103,5 +133,3 @@ function sendEmail($fromEmail, $fromName, $to, $subject, $message, $replyTo = nu
         }
         return false;
     }
-}
-?>

@@ -116,8 +116,8 @@ try {
         $emailMessage .= "Met vriendelijke groeten,\n";
         $emailMessage .= "RAAK Achterbos";
         
-        // Verstuur email via SMTP
-        $mailSent = sendEmail($email, "$voornaam $naam", $subject, $emailMessage);
+        // Verstuur email via SMTP (new signature: from, fromName, to, subject, message, replyTo, bcc)
+        $mailSent = sendEmail('info@raakachterbos.be', 'RAAK Achterbos', $email, $subject, $emailMessage);
 
         if ($mailSent) {
             echo json_encode([

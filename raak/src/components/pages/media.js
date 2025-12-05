@@ -5,6 +5,7 @@ function MediaPage() {
   const [activeSection, setActiveSection] = useState('fotos');
   const [folders, setFolders] = useState([]);
   const [pdfFolders, setPdfFolders] = useState([]);
+  const [pdfKooklesFolders, setPdfKooklesFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -28,6 +29,15 @@ function MediaPage() {
           setPdfFolders(data);
         })
         .catch(err => console.error('Error loading PDF folders:', err));
+    }
+    else if (activeSection === 'kookles') {
+      fetch('/php/kookles.php')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Loaded PDF folders kookles:', data);
+          setPdfKooklesFolders(data);
+        })
+        .catch(err => console.error('Error loading PDF folders kookles:', err));
     }
   }, [activeSection]);
 
@@ -70,12 +80,13 @@ function MediaPage() {
     return `${process.env.PUBLIC_URL}/pictures/${folderName}/${photoName}`;
   };
 
-  const getPdfPath = (filename) => {
-    return `${process.env.PUBLIC_URL}/folders/${filename}`;
+  const getPdfPath = (filename, isKookles = false) => {
+    const folder = isKookles ? 'kookles' : 'folders';
+    return `${process.env.PUBLIC_URL}/${folder}/${filename}`;
   };
 
-  const openPdf = (filename) => {
-    window.open(getPdfPath(filename), '_blank');
+  const openPdf = (filename, isKookles = false) => {
+    window.open(getPdfPath(filename, isKookles), '_blank');
   };
 
   return (
@@ -83,11 +94,34 @@ function MediaPage() {
       <div className="subnav">
         <nav>
           <ul>
-            <li><a href="#" className={activeSection === 'folders' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setActiveSection('folders'); }}>Folders</a></li>
             <li><a href="#" className={activeSection === 'fotos' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setActiveSection('fotos'); setSelectedFolder(null); }}>Foto's</a></li>
+            <li><a href="#" className={activeSection === 'folders' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setActiveSection('folders'); }}>Folders</a></li>
+            <li><a href="#" className={activeSection === 'kookles' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setActiveSection('kookles'); }}>Kookles</a></li>
           </ul>
         </nav>
       </div>
+
+      {activeSection === 'kookles' && (
+        <div className="media-section">
+          <h1>Kookles</h1>
+          <div className="photo-folders">
+            {pdfKooklesFolders.map((folder) => (
+              <div key={folder.file} className="folder-card" onClick={() => openPdf(folder.file, true)}>
+                <div className="folder-thumbnail">
+                  <img
+                    src={`${process.env.PUBLIC_URL}/images/garde.png`}
+                    alt="PDF"
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+                <div className="folder-info">
+                  <h3>{folder.displayName}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeSection === 'folders' && (
         <div className="media-section">
@@ -97,7 +131,7 @@ function MediaPage() {
               <div key={folder.file} className="folder-card" onClick={() => openPdf(folder.file)}>
                 <div className="folder-thumbnail">
                   <img
-                    src={`${process.env.PUBLIC_URL}/images/pdf.png`}
+                    src={`${process.env.PUBLIC_URL}/images/folder.png`}
                     alt="PDF"
                     onError={(e) => e.target.style.display = 'none'}
                   />

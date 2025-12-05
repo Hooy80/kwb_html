@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
-import Login from './Login';
+import App from '../../../raak/public/bestuur/App';
+import Login from '../../../raak/public/bestuur/Login';
 
 function Root() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

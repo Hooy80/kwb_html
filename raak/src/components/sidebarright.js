@@ -14,18 +14,24 @@ function SidebarRight() {
     fetch(`${process.env.PUBLIC_URL}/php/calendar.php`)
       .then(response => response.json())
       .then(data => {
-        if (data.success && data.data.length > 0) {
+        // calendar.php returns an array directly
+        if (Array.isArray(data) && data.length > 0) {
+          console.log('All activities:', data);
+
           // Filter alleen toekomstige activiteiten die een foto hebben
-          const futureActivitiesWithPhoto = data.data.filter(act =>
+          const futureActivitiesWithPhoto = data.filter(act =>
             (act.status === 'future' || act.status === 'today') && act.photoFilename
           );
+
+          console.log('Future activities with photo:', futureActivitiesWithPhoto);
+
           if (futureActivitiesWithPhoto.length > 0) {
             setNextActivity(futureActivitiesWithPhoto[0]);
+            console.log('Selected activity:', futureActivitiesWithPhoto[0]);
           }
 
           // Check of er een Smakelijk Wandelen activiteit is met inschrijving = true
-
-          const smakelijkWandelenWithInschrijving = data.data.find(act => {
+          const smakelijkWandelenWithInschrijving = data.find(act => {
             const hasSmakelijk = act.name.toLowerCase().includes('smakelijk');
             const hasWandelen = act.name.toLowerCase().includes('wandelen');
             const hasInschrijving = act.inschrijving == 1 || act.inschrijving === true || act.inschrijving === "1" || act.inschrijving === "true";

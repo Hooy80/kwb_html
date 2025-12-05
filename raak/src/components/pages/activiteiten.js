@@ -12,10 +12,26 @@ function ActivitiesPage() {
     fetch(`${process.env.PUBLIC_URL}/php/calendar.php`)
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          setActivities(data.data);
-        } else {
+        // calendar.php geeft direct een array terug
+        if (Array.isArray(data)) {
+          // Filter: toekomstige, vandaag, en voorbije activiteiten van laatste maand
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+          const relevantActivities = data.filter(a => {
+            if (a.status === 'future' || a.status === 'today') return true;
+            if (a.status === 'past') {
+              const activityDate = new Date(a.date);
+              return activityDate >= oneMonthAgo;
+            }
+            return false;
+          });
+
+          setActivities(relevantActivities);
+        } else if (data.error) {
           setError(data.error);
+        } else {
+          setError('Onverwacht response formaat');
         }
         setLoading(false);
       })

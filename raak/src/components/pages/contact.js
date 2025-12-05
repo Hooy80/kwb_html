@@ -51,15 +51,16 @@ function ContactPage() {
       {activeSection === 'bestuur' && (
         <div className="contact-section">
           <h1>Ons bestuur</h1>
-          <p>Hier vindt u informatie over ons bestuursteam.</p>
           <ul>
             <li>Voorzitter: Bram Hannes</li>
             <li>Secretaris: Luc Sannen</li>
             <li>Penningmeester: Alex Van Decraen</li>
-          </ul>
+          </ul><br />
           <h1>Wijkmeesters</h1>
-          <p>Naast het dagelijks bestuur hebben wij ook nog een heel team van wijkmeesters die het bestuur bijstaan. Dit team zorgt mee voor de organisatie en activiteiten van Raak.</p>
-          <p>Hiernaast hebben wij ook de hulp van de vele vrijwilligers die zich inzetten tijdens onze activiteiten. Wil je zelf helpen tijdens een activiteit of wil je je aansluiten tot ons team? Neem dan gerust contact met ons op.</p>
+          <p>Naast het dagelijks bestuur hebben wij ook nog een heel team van wijkmeesters die het bestuur bijstaan. Dit team zorgt mee voor de organisatie en activiteiten van Raak.</p><br />
+          <h1>Vrijwilligers</h1>
+          <p>Verder hebben wij ook de hulp van de vele vrijwilligers die zich inzetten tijdens onze activiteiten. Hierbij willen we het ganse team van vrijwillegers alvast nog eens bedanken voor hun inzet.</p>
+          <p>Wil je zelf eens helpen tijdens een activiteit of wil je je aansluiten tot ons team? Neem dan gerust contact met ons op.</p>
         </div>
       )}
 

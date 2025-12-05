@@ -169,6 +169,28 @@ if ($selectiveMode) {
             echo "✗\n";
         }
     }
+    
+    // Upload bestuur directory (als deze in build staat)
+    echo "\nUploaden bestuur naar /bestuur...\n";
+    if (is_dir(__DIR__ . '/build/bestuur')) {
+        @ftp_mkdir($conn, 'bestuur');
+        $bestuurFiles = glob(__DIR__ . '/build/bestuur/*');
+        foreach ($bestuurFiles as $file) {
+            if (is_file($file)) {
+                $filename = basename($file);
+                echo "Upload: $filename ... ";
+                $mode = (preg_match('/\.(html|css|js|json|txt)$/i', $filename)) ? FTP_ASCII : FTP_BINARY;
+                if (@ftp_put($conn, 'bestuur/' . $filename, $file, $mode)) {
+                    echo "✓\n";
+                    $file_count++;
+                } else {
+                    echo "✗\n";
+                }
+            }
+        }
+    } else {
+        echo "(overslaan) lokale map build/bestuur niet gevonden\n";
+    }
 }
 
 $duration = round(microtime(true) - $start, 2);

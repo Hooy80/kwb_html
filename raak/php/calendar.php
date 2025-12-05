@@ -7,32 +7,84 @@ header('Access-Control-Allow-Methods: GET');
 require_once __DIR__ . '/db_connect.php';
 
 try {
-    // Haal activiteiten op, gesorteerd op datum (nieuwste eerst)
-    // Inclusief activiteiten van maximaal 1 maand geleden
-    $stmt = $pdo->prepare("
-        SELECT 
-            id,
-            date,
-            name,
-            start_hour,
-            stop_hour,
-            place,
-            comment,
-            info,
-            inschrijving,
-            CASE 
-                WHEN date < CURDATE() THEN 'past'
-                WHEN date = CURDATE() THEN 'today'
-                ELSE 'future'
-            END as status,
-            DATEDIFF(CURDATE(), date) as days_ago
-        FROM calendar
-        WHERE date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH) OR inschrijving = 1
-        ORDER BY date ASC
-    ");
+    // Check of er een specifiek werkjaar is opgegeven via GET parameter
+    $requestedWerkjaar = isset($_GET['werkjaar']) ? (int)$_GET['werkjaar'] : null;
     
-    $stmt->execute();
+    // Bepaal werkjaar
+    $today = new DateTime();
+    $currentYear = (int)$today->format('Y');
+    $currentMonth = (int)$today->format('m');
+    
+    // Als er een werkjaar is opgegeven, filter op dat werkjaar
+    // Anders alle activiteiten ophalen (voor werkjaar dropdown)
+    if ($requestedWerkjaar !== null) {
+        // Gebruik opgegeven werkjaar (bijv. 2025 = sept 2025 - aug 2026)
+        $werkjaarStart = $requestedWerkjaar . '-09-01';
+        $werkjaarEind = ($requestedWerkjaar + 1) . '-08-31';
+        
+        // Haal activiteiten op voor specifiek werkjaar
+        $stmt = $pdo->prepare("
+            SELECT 
+                id,
+                date,
+                name,
+                start_hour,
+                stop_hour,
+                place,
+                comment,
+                info,
+                inschrijving,
+                CASE 
+                    WHEN date < CURDATE() THEN 'past'
+                    WHEN date = CURDATE() THEN 'today'
+                    ELSE 'future'
+                END as status,
+                DATEDIFF(CURDATE(), date) as days_ago
+            FROM calendar
+            WHERE date >= :werkjaar_start AND date <= :werkjaar_eind
+            ORDER BY date ASC
+        ");
+        
+        $stmt->execute([
+            'werkjaar_start' => $werkjaarStart,
+            'werkjaar_eind' => $werkjaarEind
+        ]);
+    } else {
+        // Haal alle activiteiten op (voor werkjaar dropdown)
+        $stmt = $pdo->prepare("
+            SELECT 
+                id,
+                date,
+                name,
+                start_hour,
+                stop_hour,
+                place,
+                comment,
+                info,
+                inschrijving,
+                CASE 
+                    WHEN date < CURDATE() THEN 'past'
+                    WHEN date = CURDATE() THEN 'today'
+                    ELSE 'future'
+                END as status,
+                DATEDIFF(CURDATE(), date) as days_ago
+            FROM calendar
+            ORDER BY date ASC
+        ");
+        
+        $stmt->execute();
+        $werkjaarStart = null;
+        $werkjaarEind = null;
+    }
     $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Debug info toevoegen
+    $debugInfo = [
+        'werkjaar_start' => $werkjaarStart ?? 'all',
+        'werkjaar_eind' => $werkjaarEind ?? 'all',
+        'current_date' => $today->format('Y-m-d'),
+        'count' => count($activities)
+    ];
     
     // Format de data voor React
     $formattedActivities = array_map(function($activity) {
@@ -70,10 +122,8 @@ try {
         ];
     }, $activities);
     
-    echo json_encode([
-        'success' => true,
-        'data' => $formattedActivities
-    ]);
+    // Return array direct (voor backwards compatibility)
+    echo json_encode($formattedActivities);
     
 } catch(PDOException $e) {
     http_response_code(500);

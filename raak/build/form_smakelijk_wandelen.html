@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inschrijving Smakelijk Wandelen</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .activity-info {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 18px;
+        color: #555;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        font-family: Arial, sans-serif;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #ebe24c;
+      }
+
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      button {
+        width: 100%;
+        padding: 15px;
+        background: #ebe24c;
+        color: #2c3e50;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.3s;
+      }
+
+      button:hover {
+        opacity: 0.9;
+      }
+
+      .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="form-container">
+      <h1>Inschrijving Smakelijk Wandelen</h1>
+      <div id="activity-info" class="activity-info"></div>
+
+      <div id="success-message" style="display: none;" class="success-message"></div>
+      <div id="error-message" style="display: none;" class="error-message"></div>
+
+      <form id="inschrijving-form">
+        <div class="form-group">
+          <label for="naam">Naam: *</label>
+          <input type="text" id="naam" name="naam" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email: *</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="aantal_personen">Aantal personen: *</label>
+          <input type="number" id="aantal_personen" name="aantal_personen" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="aantal_vegi">Aantal vegetarisch:</label>
+          <input type="number" id="aantal_vegi" name="aantal_vegi" min="0" value="0">
+        </div>
+
+        <div class="form-group">
+          <label for="opmerking">Opmerking:</label>
+          <textarea id="opmerking" name="opmerking"></textarea>
+        </div>
+
+        <button type="submit">Inschrijven</button>
+      </form>
+    </div>
+
+    <script>
+      // Laad activiteit info
+      fetch('/php/calendar.php')
+        .then(response => response.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const activity = data.find(act => {
+              const name = act.name.toLowerCase();
+              return name.includes('smakelijk') && name.includes('wandelen');
+            });
+
+            if (activity) {
+              const datum = new Date(activity.date).toLocaleDateString('nl-BE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+              document.getElementById('activity-info').innerHTML =
+                `<strong>${datum}</strong> - ${activity.place || ''}`;
+            }
+          }
+        })
+        .catch(err => console.error('Fout bij laden activiteit:', err));
+
+      // Form submit handler
+      document.getElementById('inschrijving-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+          naam: document.getElementById('naam').value,
+          email: document.getElementById('email').value,
+          aantal_personen: document.getElementById('aantal_personen').value,
+          aantal_vegi: document.getElementById('aantal_vegi').value,
+          opmerking: document.getElementById('opmerking').value
+        };
+
+        try {
+          const response = await fetch('/php/smakelijk_wandelen.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            document.getElementById('success-message').textContent =
+              `Bedankt ${formData.naam}! Je inschrijving is ontvangen.`;
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('inschrijving-form').reset();
+
+            setTimeout(() => {
+              document.getElementById('success-message').style.display = 'none';
+            }, 5000);
+          } else {
+            document.getElementById('error-message').textContent =
+              'Er ging iets mis: ' + (data.error || 'Onbekende fout');
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+          }
+        } catch (error) {
+          document.getElementById('error-message').textContent =
+            'Netwerkfout: ' + error.message;
+          document.getElementById('error-message').style.display = 'block';
+          document.getElementById('success-message').style.display = 'none';
+        }
+      });
+    </script>
+  </body>
+
+</html>

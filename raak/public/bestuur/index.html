@@ -3,25 +3,321 @@
 
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/png" href="%PUBLIC_URL%/images/raak_druppel_001.png" />
+    <link rel="icon" type="image/png" href="/images/raak_druppel_001.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#ebe24c" />
     <meta name="description" content="Bestuur RAAK Achterbos" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/images/raak_druppel_001.png" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="apple-touch-icon" href="/images/raak_druppel_001.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/bestuur/App.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <title>Bestuur RAAK Achterbos</title>
   </head>
 
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    -->
-    <title>React App</title>
-    </head>
 
-    <body>
-      <noscript>You need to enable JavaScript to run this app.</noscript>
-      <div id="root"></div>
-    </body>
+    <!-- Login Screen -->
+    <div id="login-container" class="login-container">
+      <div class="login-box">
+        <h1>RAAK Achterbos</h1>
+        <h2>Bestuur Login</h2>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">Gebruikersnaam</label>
+            <input type="text" id="username" name="username" autocomplete="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Wachtwoord</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required />
+          </div>
+          <div id="login-error" class="error-message"></div>
+          <button type="submit" class="btn-primary">Inloggen</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-container" class="admin-container" style="display: none;">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <h2>RAAK Bestuur</h2>
+        </div>
+        <ul class="nav-menu">
+          <li><a href="#" class="nav-link active" data-page="dashboard"><i class="fa fa-dashboard"></i> Dashboard</a>
+          </li>
+          <li><a href="#" class="nav-link" data-page="activiteiten"><i class="fa fa-calendar"></i> Activiteiten</a></li>
+          <li><a href="#" class="nav-link" data-page="inschrijvingen"><i class="fa fa-list-alt"></i> Inschrijvingen</a>
+          </li>
+          <li><a href="#" class="nav-link" data-page="berichten"><i class="fa fa-envelope"></i> Berichten</a></li>
+          <li><a href="#" class="nav-link" data-page="gebruikers"><i class="fa fa-users"></i> Gebruikers</a></li>
+
+        </ul>
+      </nav>
+
+      <main class="main-content">
+        <header class="top-bar">
+          <div class="user-info">
+            <span id="user-name">Admin</span>
+            <button id="logout-btn" class="btn-secondary">Uitloggen</button>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- Dashboard Page -->
+          <div id="page-dashboard" class="admin-page active">
+            <h1>Dashboard</h1>
+            <div class="stats-grid">
+              <div class="stat-card" onclick="navigateToPage('activiteiten')" style="cursor: pointer;">
+                <div class="stat-icon"><i class="fa fa-calendar"></i></div>
+                <div class="stat-info">
+                  <h3 id="stat-activities">0</h3>
+                  <p>Komende activiteiten</p>
+                </div>
+              </div>
+              <div class="stat-card" onclick="navigateToPage('berichten')" style="cursor: pointer;">
+                <div class="stat-icon"><i class="fa fa-envelope"></i></div>
+                <div class="stat-info">
+                  <h3 id="stat-messages">0</h3>
+                  <p>Nieuwe berichten</p>
+                </div>
+              </div>
+            </div>
+
+            <h2 style="margin-top: 30px;">Inschrijvingen</h2>
+            <div class="stats-grid" id="inschrijvingen-stats">
+              <p>Laden...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gebruikers Page -->
+        <div id="page-gebruikers" class="admin-page">
+          <h1>Gebruikers Beheer</h1>
+
+          <!-- Admin: Nieuwe gebruiker toevoegen -->
+          <div id="admin-section" style="display: none;">
+            <div class="card">
+              <h2>Nieuwe Gebruiker Toevoegen</h2>
+              <form id="add-user-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="new-voornaam">Voornaam *</label>
+                    <input type="text" id="new-voornaam" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-naam">Naam *</label>
+                    <input type="text" id="new-naam" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="new-email">Email *</label>
+                    <input type="email" id="new-email" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-functie">Functie *</label>
+                    <select id="new-functie" required>
+                      <option value="">Selecteer...</option>
+                      <option value="inschrijving">Inschrijving</option>
+                      <option value="wijkmeester">Wijkmeester</option>
+                      <option value="bestuur">Bestuur</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="add-user-error" class="error-message"></div>
+                <div id="add-user-success" class="success-message"></div>
+                <button type="submit" class="btn-primary">Gebruiker Toevoegen</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Alle gebruikers: Lijst van gebruikers -->
+          <div class="card">
+            <h2>Gebruikers</h2>
+            <div id="users-list" class="users-table">
+              <p>Laden...</p>
+            </div>
+          </div>
+
+          <!-- Eigen profiel aanpassen -->
+          <div class="card">
+            <h2>Mijn Profiel</h2>
+            <form id="edit-profile-form">
+              <input type="hidden" id="profile-user-id" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-voornaam">Voornaam</label>
+                  <input type="text" id="profile-voornaam" />
+                </div>
+                <div class="form-group">
+                  <label for="profile-naam">Naam</label>
+                  <input type="text" id="profile-naam" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-email">Email</label>
+                  <input type="email" id="profile-email" />
+                </div>
+                <div class="form-group">
+                  <label for="profile-login">Login</label>
+                  <input type="text" id="profile-login" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="profile-password">Nieuw Wachtwoord (laat leeg om niet te wijzigen)</label>
+                <input type="password" id="profile-password" autocomplete="new-password" />
+              </div>
+              <div id="profile-error" class="error-message"></div>
+              <div id="profile-success" class="success-message"></div>
+              <button type="submit" class="btn-primary">Profiel Bijwerken</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Activiteiten Page -->
+        <div id="page-activiteiten" class="admin-page">
+          <h1>Activiteiten</h1>
+
+          <!-- Admin/Bestuur: Nieuwe activiteit toevoegen -->
+          <div id="activiteit-admin-section" style="display: none;">
+            <div class="card">
+              <h2>Nieuwe Activiteit Toevoegen</h2>
+              <form id="add-activiteit-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="new-act-date">Datum *</label>
+                    <input type="date" id="new-act-date" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-act-name">Naam *</label>
+                    <input type="text" id="new-act-name" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="new-act-start">Start tijd</label>
+                    <input type="time" id="new-act-start" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-act-stop">Eind tijd</label>
+                    <input type="time" id="new-act-stop" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="new-act-place">Locatie</label>
+                  <input type="text" id="new-act-place" />
+                </div>
+                <div class="form-group">
+                  <label for="new-act-comment">Info</label>
+                  <textarea id="new-act-comment" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Activiteit Toevoegen</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 id="werkjaar-title">Werkjaar 2024-2025</h2>
+              <div class="form-group" style="margin: 0;">
+                <label for="werkjaar-select">Selecteer werkjaar:</label>
+                <select id="werkjaar-select" onchange="loadActiviteitenForWerkjaar()">
+                  <!-- Opties worden dynamisch toegevoegd -->
+                </select>
+              </div>
+            </div>
+            <div id="activities-list">
+              <p>Laden...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Berichten Page -->
+        <div id="page-berichten" class="admin-page">
+          <h1>Berichten</h1>
+          <div class="card">
+            <h2>Contact Berichten</h2>
+            <div id="messages-list">
+              <p>Laden...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inschrijvingen Page -->
+        <div id="page-inschrijvingen" class="admin-page">
+          <h1>Inschrijvingen</h1>
+
+          <div class="card">
+            <h2>Selecteer Activiteit</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inschrijving-select">Activiteit</label>
+                <select id="inschrijving-select">
+                  <option value="">-- Selecteer een activiteit --</option>
+                </select>
+              </div>
+              <div class="form-group" id="jaar-select-container" style="display: none;">
+                <label for="jaar-select">Jaar</label>
+                <select id="jaar-select">
+                  <option value="">-- Selecteer een jaar --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="inschrijvingen-data-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 id="inschrijvingen-title" style="margin: 0;">Inschrijvingen</h2>
+              <a id="inschrijving-form-link" href="#" target="_blank" class="btn-secondary" style="display: none;">
+                <i class="fa fa-external-link"></i> Open formulier
+              </a>
+            </div>
+            <div id="inschrijvingen-table">
+              <p>Laden...</p>
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+              <button id="export-excel-btn" class="btn-secondary">
+                <i class="fa fa-file-excel-o"></i> Exporteer naar Excel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Foto's Page -->
+        <div id="page-fotos" class="admin-page">
+          <h1>Foto's Beheer</h1>
+          <p>Foto's beheer - nog te implementeren</p>
+        </div>
+
+        <!-- Folders Page -->
+        <div id="page-folders" class="admin-page">
+          <h1>Folders Beheer</h1>
+          <p>Folders beheer - nog te implementeren</p>
+        </div>
+    </div>
+    </main>
+    </div>
+
+    <script>
+      // Inline test om te zien of JavaScript werkt
+      console.log('=== BESTUUR PAGE LOADED ===');
+      console.log('login-form element:', document.getElementById('login-form'));
+    </script>
+    <script src="/bestuur/App.js"></script>
+    <script>
+      // Test of App.js geladen is
+      setTimeout(function () {
+        if (typeof isAuthenticated === 'undefined') {
+          console.error('ERROR: App.js is NIET geladen!');
+          alert('ERROR: App.js is NIET geladen! Check console.');
+        } else {
+          console.log('SUCCESS: App.js is geladen!');
+        }
+      }, 100);
+    </script>
+  </body>
 
 </html>

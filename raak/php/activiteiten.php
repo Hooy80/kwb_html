@@ -46,7 +46,7 @@ try {
             'stop_hour' => $input['stop_hour'] ?? null,
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
-            'info' => $input['info'] ?? null,
+            'info' => $input['info'] ?? '',
             'inschrijving' => $input['inschrijving'] ?? 0
         ]);
 
@@ -89,7 +89,7 @@ try {
             'stop_hour' => $input['stop_hour'] ?? null,
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
-            'info' => $input['info'] ?? null,
+            'info' => $input['info'] ?? '',
             'inschrijving' => $input['inschrijving'] ?? 0
         ]);
 

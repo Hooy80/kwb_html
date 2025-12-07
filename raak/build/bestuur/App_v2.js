@@ -751,7 +751,14 @@ function handleAddActiviteit(e) {
     fetch('/php/activiteiten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, name, startHour, stopHour, place, comment })
+        body: JSON.stringify({
+            date,
+            name,
+            start_hour: startHour,
+            stop_hour: stopHour,
+            place,
+            comment
+        })
     })
         .then(response => response.json())
         .then(data => {
@@ -805,7 +812,15 @@ function editActiviteit(activityId) {
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: activityId, date, name, startHour, stopHour, place, comment })
+                    body: JSON.stringify({
+                        id: activityId,
+                        date,
+                        name,
+                        start_hour: startHour,
+                        stop_hour: stopHour,
+                        place,
+                        comment
+                    })
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -1787,10 +1802,10 @@ async function sendMailingEmail(event) {
 
         console.log('Response status:', response.status);
         console.log('Response ok:', response.ok);
-        
+
         const responseText = await response.text();
         console.log('Response text:', responseText);
-        
+
         let data;
         try {
             data = JSON.parse(responseText);

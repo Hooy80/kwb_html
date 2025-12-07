@@ -170,11 +170,11 @@ if ($selectiveMode) {
         }
     }
     
-    // Upload bestuur directory (als deze in build staat)
+    // Upload bestuur directory (direct vanuit src_bestuur)
     echo "\nUploaden bestuur naar /bestuur...\n";
-    if (is_dir(__DIR__ . '/build/bestuur')) {
+    if (is_dir(__DIR__ . '/src_bestuur')) {
         @ftp_mkdir($conn, 'bestuur');
-        $bestuurFiles = glob(__DIR__ . '/build/bestuur/*');
+        $bestuurFiles = glob(__DIR__ . '/src_bestuur/*');
         foreach ($bestuurFiles as $file) {
             if (is_file($file)) {
                 $filename = basename($file);
@@ -189,7 +189,7 @@ if ($selectiveMode) {
             }
         }
     } else {
-        echo "(overslaan) lokale map build/bestuur niet gevonden\n";
+        echo "(overslaan) lokale map src_bestuur niet gevonden\n";
     }
 }
 

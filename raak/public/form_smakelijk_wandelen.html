@@ -172,8 +172,8 @@
         return false;
       }
 
-      // Laad activiteit info (cache-bust to avoid stale Varnish/CDN cache)
-      fetch('/php/calendar.php?ts=' + Date.now())
+      // Laad activiteit info
+      fetch('/php/calendar.php')
         .then(response => response.json())
         .then(data => {
           const activities = Array.isArray(data) ? data : (data && data.data ? data.data : []);

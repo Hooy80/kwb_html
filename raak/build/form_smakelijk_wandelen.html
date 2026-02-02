@@ -1,3 +1,4 @@
+<!-- deployed: 2026-02-02 15:40:00 -->
 <!DOCTYPE html>
 <html lang="nl">
 
@@ -19,7 +20,8 @@
       }
 
       .form-container {
-        max-width: 600px;
+        max-width: 900px; /* vergroot zodat gelijk met bestuurs-modal */
+        width: 90%; /* responsief: neemt tot 90% van viewport op kleine schermen */
         margin: 0 auto;
         background: white;
         padding: 30px;
@@ -144,9 +146,8 @@
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
-          <input type="checkbox" id="mail" name="mail" value="1" style="width: auto; margin: 0;">
-          <label for="mail" style="margin: 0; font-weight: normal;">Ik wil op de hoogte gehouden worden van Smakelijk
-            Wandelen en andere activiteiten via mail</label>
+          <input type="checkbox" id="mail" name="mail" value="1" style="width: auto; margin: 0;" required>
+          <label for="mail" style="margin: 0; font-weight: normal;">Ik ga akkoord met de <a href="alg_vw_smak.html" id="alg-vw-link" rel="noopener noreferrer" onclick="openAlgVW(event)">algemene voorwaarden</a> </label>
         </div>
 
         <button type="submit">Inschrijven</button>
@@ -154,28 +155,103 @@
     </div>
 
     <script>
+      // Function to open Algemene Voorwaarden in a centered popup
+      function openAlgVW(e) {
+        e = e ? e : window.event;
+        e.preventDefault();
+        const url = 'alg_vw_smak.html';
+        const maxWidth = 900;
+        const maxHeight = 700;
+        const padding = 40;
+        const width = Math.min(window.innerWidth - padding, maxWidth);
+        const height = Math.min(window.innerHeight - padding, maxHeight);
+        const left = Math.max(Math.round((window.screen.width - width) / 2), 0);
+        const top = Math.max(Math.round((window.screen.height - height) / 2), 0);
+        const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`;
+        window.open(url, 'algVW', features);
+        return false;
+      }
+
       // Laad activiteit info
       fetch('/php/calendar.php')
         .then(response => response.json())
         .then(data => {
-          if (Array.isArray(data)) {
-            const activity = data.find(act => {
-              const name = act.name.toLowerCase();
-              return name.includes('smakelijk') && name.includes('wandelen');
-            });
+          const activities = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+          if (!Array.isArray(activities) || activities.length === 0) return;
 
-            if (activity) {
-              const datum = new Date(activity.date).toLocaleDateString('nl-BE', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              });
-              document.getElementById('activity-info').innerHTML =
-                `<strong>${datum}</strong> - ${activity.place || ''}`;
+          // Filter op naam (smakelijk && wandelen) EN alleen actieve inschrijvingen
+          // Helper: normalize inschrijving to boolean
+          const isInscribedActive = (val) => {
+            if (val === true || val === 1) return true;
+            if (typeof val === 'string') {
+              const v = val.trim().toLowerCase();
+              return v === '1' || v === 'true' || v === 'yes';
             }
-          }
-        })
-        .catch(err => console.error('Fout bij laden activiteit:', err));
+            return false;
+          };
+
+          // Helper: normalize and parse date string to a Date at local midnight (avoid TZ shifts)
+          const parseDateOnly = (raw) => {
+            if (!raw) return null;
+            // take first 10 chars YYYY-MM-DD if available
+            const datePart = String(raw).trim().split(' ')[0];
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return new Date(raw);
+            return new Date(datePart + 'T00:00:00');
+          };
+
+          const matches = activities.filter(act => {
+            const name = (act.name || '').toLowerCase();
+            const hasName = name.includes('smakelijk') && name.includes('wandelen');
+            const hasInschrijving = isInscribedActive(act.inschrijving);
+            return hasName && hasInschrijving;
+          }).map(act => {
+            const dateObj = parseDateOnly(act.date);
+            return Object.assign({}, act, { _dateObj: dateObj });
+          });
+
+           const today = new Date();
+
+           // Als geen matches: fallback 10 mei huidig jaar
+           if (matches.length === 0) {
+             const defaultDate = new Date(today.getFullYear(), 4, 10); // mei = 4 (0-based months)
+             const datum = defaultDate.toLocaleDateString('nl-BE', { year: 'numeric', month: 'long', day: 'numeric' });
+             document.getElementById('activity-info').innerHTML = `<strong>${datum}</strong>`;
+             return;
+           }
+
+           // 1) kies eerste toekomstige match (datum >= vandaag)
+           // compare only dates (ignore time)
+           const today00 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+           let activity = matches.find(a => {
+             const d = a._dateObj || null;
+             return d && d.getTime() >= today00.getTime();
+           });
+
+           // 2) anders kies activiteit in huidig jaar
+           if (!activity) {
+             const currentYear = today.getFullYear();
+             activity = matches.find(a => {
+               const d = a._dateObj || null;
+               return d && d.getFullYear() === currentYear;
+             });
+           }
+
+           // 3) fallback: laatste match
+           if (!activity) {
+             activity = matches[matches.length - 1];
+           }
+
+           if (activity) {
+             const d = activity._dateObj || parseDateOnly(activity.date);
+             const datum = d ? d.toLocaleDateString('nl-BE', {
+               year: 'numeric',
+               month: 'long',
+               day: 'numeric'
+             }) : 'datum onbekend';
+             document.getElementById('activity-info').innerHTML = `<strong>${datum}</strong>${activity.place ? ' - ' + activity.place : ''}`;
+           }
+         })
+         .catch(err => console.error('Fout bij laden activiteit:', err));
 
       // Form submit handler
       document.getElementById('inschrijving-form').addEventListener('submit', async (e) => {
@@ -211,7 +287,7 @@
             }, 5000);
           } else {
             document.getElementById('error-message').textContent =
-              'Er ging iets mis: ' + (data.error || 'Onbekende fout');
+              'Er ging iets mis: ' + (data.error ? data.error : 'Onbekende fout');
             document.getElementById('error-message').style.display = 'block';
             document.getElementById('success-message').style.display = 'none';
           }

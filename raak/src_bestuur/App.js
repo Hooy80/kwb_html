@@ -511,7 +511,7 @@ function loadActiviteitenForWerkjaar() {
             if (future.length > 0) {
                 html += '<h3 style="color: #27ae60; margin-top: 20px;">Aankomende Activiteiten</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Opmerking</th><th>Info</th><th>Verantwoordelijke</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -526,6 +526,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
                     html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
+                    html += `<td>${act.verantwoordelijke || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -543,7 +545,7 @@ function loadActiviteitenForWerkjaar() {
             if (today.length > 0) {
                 html += '<h3 style="color: #f39c12; margin-top: 20px;">Vandaag</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Opmerking</th><th>Info</th><th>Verantwoordelijke</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -558,6 +560,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
                     html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
+                    html += `<td>${act.verantwoordelijke || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -575,7 +579,7 @@ function loadActiviteitenForWerkjaar() {
             if (past.length > 0) {
                 html += '<h3 style="color: #95a5a6; margin-top: 20px;">Afgelopen Activiteiten</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Opmerking</th><th>Info</th><th>Verantwoordelijke</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -590,6 +594,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
                     html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
+                    html += `<td>${act.verantwoordelijke || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -742,6 +748,8 @@ function handleAddActiviteit(e) {
     const stopHour = document.getElementById('new-act-stop').value || null;
     const place = document.getElementById('new-act-place').value || null;
     const comment = document.getElementById('new-act-comment').value || null;
+    const info = document.getElementById('new-act-info').value || null;
+    const verantwoordelijke = document.getElementById('new-act-verantwoordelijke').value || null;
 
     if (!date || !name) {
         alert('Datum en naam zijn verplicht');
@@ -757,7 +765,9 @@ function handleAddActiviteit(e) {
             start_hour: startHour,
             stop_hour: stopHour,
             place,
-            comment
+            comment,
+            info,
+            verantwoordelijke
         })
     })
         .then(response => response.json())
@@ -796,6 +806,8 @@ function editActiviteit(activityId) {
             document.getElementById('new-act-stop').value = activity.stopHour ? activity.stopHour.substring(0, 5) : '';
             document.getElementById('new-act-place').value = activity.place || '';
             document.getElementById('new-act-comment').value = activity.comment || '';
+            document.getElementById('new-act-info').value = activity.info || '';
+            document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
 
             // Change form submit handler to update instead of add
             const form = document.getElementById('add-activiteit-form');
@@ -808,6 +820,8 @@ function editActiviteit(activityId) {
                 const stopHour = document.getElementById('new-act-stop').value || null;
                 const place = document.getElementById('new-act-place').value || null;
                 const comment = document.getElementById('new-act-comment').value || null;
+                const info = document.getElementById('new-act-info').value || null;
+                const verantwoordelijke = document.getElementById('new-act-verantwoordelijke').value || null;
 
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
@@ -819,7 +833,9 @@ function editActiviteit(activityId) {
                         start_hour: startHour,
                         stop_hour: stopHour,
                         place,
-                        comment
+                        comment,
+                        info,
+                        verantwoordelijke
                     })
                 })
                     .then(response => response.json())
@@ -868,6 +884,8 @@ function copyActiviteit(activityId) {
             document.getElementById('new-act-stop').value = activity.stopHour ? activity.stopHour.substring(0, 5) : '';
             document.getElementById('new-act-place').value = activity.place || '';
             document.getElementById('new-act-comment').value = activity.comment || '';
+            document.getElementById('new-act-info').value = activity.info || '';
+            document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
 
             // Make sure form is in add mode
             const form = document.getElementById('add-activiteit-form');
@@ -1840,3 +1858,4 @@ async function sendMailingEmail(event) {
         submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';
     }
 }
+

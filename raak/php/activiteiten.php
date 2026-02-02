@@ -35,8 +35,8 @@ try {
         $input = json_decode(file_get_contents('php://input'), true);
         
         $stmt = $pdo->prepare("
-            INSERT INTO calendar (date, name, start_hour, stop_hour, place, comment, info, inschrijving)
-            VALUES (:date, :name, :start_hour, :stop_hour, :place, :comment, :info, :inschrijving)
+            INSERT INTO calendar (date, name, start_hour, stop_hour, place, comment, info, inschrijving, verantwoordelijke)
+            VALUES (:date, :name, :start_hour, :stop_hour, :place, :comment, :info, :inschrijving, :verantwoordelijke)
         ");
         
         $stmt->execute([
@@ -47,7 +47,8 @@ try {
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
             'info' => $input['info'] ?? '',
-            'inschrijving' => $input['inschrijving'] ?? 0
+            'inschrijving' => $input['inschrijving'] ?? 0,
+            'verantwoordelijke' => $input['verantwoordelijke'] ?? null
         ]);
 
         echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
@@ -77,7 +78,8 @@ try {
                 place = :place, 
                 comment = :comment, 
                 info = :info,
-                inschrijving = :inschrijving
+                inschrijving = :inschrijving,
+                verantwoordelijke = :verantwoordelijke
             WHERE id = :id
         ");
         
@@ -90,7 +92,8 @@ try {
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
             'info' => $input['info'] ?? '',
-            'inschrijving' => $input['inschrijving'] ?? 0
+            'inschrijving' => $input['inschrijving'] ?? 0,
+            'verantwoordelijke' => $input['verantwoordelijke'] ?? null
         ]);
 
         echo json_encode(['success' => true]);
@@ -120,3 +123,5 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Server fout: ' . $e->getMessage()]);
 }
+
+?>

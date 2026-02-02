@@ -124,7 +124,7 @@ try {
     
     // Return array direct (voor backwards compatibility)
     echo json_encode($formattedActivities);
-    
+
 } catch(PDOException $e) {
     http_response_code(500);
     echo json_encode([

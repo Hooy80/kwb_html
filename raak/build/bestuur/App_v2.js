@@ -751,14 +751,7 @@ function handleAddActiviteit(e) {
     fetch('/php/activiteiten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            date,
-            name,
-            start_hour: startHour,
-            stop_hour: stopHour,
-            place,
-            comment
-        })
+        body: JSON.stringify({ date, name, startHour, stopHour, place, comment })
     })
         .then(response => response.json())
         .then(data => {
@@ -812,15 +805,7 @@ function editActiviteit(activityId) {
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: activityId,
-                        date,
-                        name,
-                        start_hour: startHour,
-                        stop_hour: stopHour,
-                        place,
-                        comment
-                    })
+                    body: JSON.stringify({ id: activityId, date, name, startHour, stopHour, place, comment })
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -1733,8 +1718,7 @@ function loadMailingEmails() {
         })
         .catch(error => {
             console.error('Error loading emails:', error);
-            console.error('Error details:', error.message, error.stack);
-            alert('Fout bij ophalen email adressen: ' + error.message);
+            alert('Fout bij ophalen email adressen');
         });
 }
 
@@ -1789,31 +1773,18 @@ async function sendMailingEmail(event) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Verzenden...';
 
-        const response = await fetch('/php/mailinglijst.php', {
+        const response = await fetch('../php/mailinglijst.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'send',
-                onderwerp,
-                bericht,
+                onderwerp: onderwerp,
+                bericht: bericht,
                 emails: currentMailingEmails
             })
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-
-        const responseText = await response.text();
-        console.log('Response text:', responseText);
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            console.error('Raw response:', responseText);
-            throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 100));
-        }
+        const data = await response.json();
 
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';
@@ -1831,10 +1802,7 @@ async function sendMailingEmail(event) {
         }
     } catch (error) {
         console.error('Error sending email:', error);
-        console.error('Error type:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        errorDiv.textContent = 'Netwerkfout bij verzenden email: ' + error.message;
+        errorDiv.textContent = 'Netwerkfout bij verzenden email.';
         const submitBtn = event.target.querySelector('button[type="submit"]');
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';

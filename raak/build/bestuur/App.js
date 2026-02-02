@@ -511,7 +511,7 @@ function loadActiviteitenForWerkjaar() {
             if (future.length > 0) {
                 html += '<h3 style="color: #27ae60; margin-top: 20px;">Aankomende Activiteiten</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Comment</th><th>Info</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -525,7 +525,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td><strong>${act.name}</strong></td>`;
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
-                    html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.comment}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -543,7 +544,7 @@ function loadActiviteitenForWerkjaar() {
             if (today.length > 0) {
                 html += '<h3 style="color: #f39c12; margin-top: 20px;">Vandaag</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Comment</th><th>Info</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -557,7 +558,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td><strong>${act.name}</strong></td>`;
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
-                    html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.comment}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -575,7 +577,7 @@ function loadActiviteitenForWerkjaar() {
             if (past.length > 0) {
                 html += '<h3 style="color: #95a5a6; margin-top: 20px;">Afgelopen Activiteiten</h3>';
                 html += '<table class="users-table"><thead><tr>';
-                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Info</th>';
+                html += '<th>Datum</th><th>Naam</th><th>Tijd</th><th>Locatie</th><th>Comment</th><th>Info</th>';
                 if (canEdit) html += '<th>Actie</th>';
                 html += '</tr></thead><tbody>';
 
@@ -589,7 +591,8 @@ function loadActiviteitenForWerkjaar() {
                     html += `<td><strong>${act.name}</strong></td>`;
                     html += `<td>${tijd}</td>`;
                     html += `<td>${act.place || '-'}</td>`;
-                    html += `<td>${act.comment || '-'}</td>`;
+                    html += `<td>${act.comment}</td>`;
+                    html += `<td>${act.info || '-'}</td>`;
                     if (canEdit) {
                         html += '<td>';
                         html += `<button class="btn-small" onclick="copyActiviteit(${act.id})">Kopiëren</button> `;
@@ -741,17 +744,26 @@ function handleAddActiviteit(e) {
     const startHour = document.getElementById('new-act-start').value || null;
     const stopHour = document.getElementById('new-act-stop').value || null;
     const place = document.getElementById('new-act-place').value || null;
-    const comment = document.getElementById('new-act-comment').value || null;
+    const comment = document.getElementById('new-act-comment').value;
+    const info = document.getElementById('new-act-info').value || null
 
-    if (!date || !name) {
-        alert('Datum en naam zijn verplicht');
+    if (!date || !name || !comment) {
+        alert('Datum, naam en commentaar zijn verplicht');
         return;
     }
 
     fetch('/php/activiteiten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, name, startHour, stopHour, place, comment })
+        body: JSON.stringify({
+            date,
+            name,
+            start_hour: startHour,
+            stop_hour: stopHour,
+            place,
+            comment,
+            info
+        })
     })
         .then(response => response.json())
         .then(data => {
@@ -788,7 +800,8 @@ function editActiviteit(activityId) {
             document.getElementById('new-act-start').value = activity.startHour ? activity.startHour.substring(0, 5) : '';
             document.getElementById('new-act-stop').value = activity.stopHour ? activity.stopHour.substring(0, 5) : '';
             document.getElementById('new-act-place').value = activity.place || '';
-            document.getElementById('new-act-comment').value = activity.comment || '';
+            document.getElementById('new-act-comment').value = activity.comment;
+            document.getElementById('new-act-info').value = activity.info || '';
 
             // Change form submit handler to update instead of add
             const form = document.getElementById('add-activiteit-form');
@@ -800,12 +813,22 @@ function editActiviteit(activityId) {
                 const startHour = document.getElementById('new-act-start').value || null;
                 const stopHour = document.getElementById('new-act-stop').value || null;
                 const place = document.getElementById('new-act-place').value || null;
-                const comment = document.getElementById('new-act-comment').value || null;
+                const comment = document.getElementById('new-act-comment').value;
+                const info = document.getElementById('new-act-info').value = activity.info || null;
 
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: activityId, date, name, startHour, stopHour, place, comment })
+                    body: JSON.stringify({
+                        id: activityId,
+                        date,
+                        name,
+                        start_hour: startHour,
+                        stop_hour: stopHour,
+                        place,
+                        comment,
+                        info
+                    })
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -852,7 +875,8 @@ function copyActiviteit(activityId) {
             document.getElementById('new-act-start').value = activity.startHour ? activity.startHour.substring(0, 5) : '';
             document.getElementById('new-act-stop').value = activity.stopHour ? activity.stopHour.substring(0, 5) : '';
             document.getElementById('new-act-place').value = activity.place || '';
-            document.getElementById('new-act-comment').value = activity.comment || '';
+            document.getElementById('new-act-comment').value = activity.comment;
+            document.getElementById('new-act-info').value = activity.info || '';
 
             // Make sure form is in add mode
             const form = document.getElementById('add-activiteit-form');
@@ -1678,8 +1702,9 @@ function loadMailinglijst() {
 
     // Event listener voor ophalen button
     document.getElementById('mailinglijst-ophalen-btn').onclick = loadMailingEmails;
-    document.getElementById('copy-emails-btn').onclick = copyEmailsToClipboard;
-    document.getElementById('open-mail-client-btn').onclick = openInMailClient;
+
+    // Event listener voor verstuur form
+    document.getElementById('mailinglijst-send-form').onsubmit = sendMailingEmail;
 }
 
 function loadMailingEmails() {
@@ -1697,41 +1722,130 @@ function loadMailingEmails() {
         .then(data => {
             if (data.success) {
                 document.getElementById('email-count').textContent = data.count;
+                currentMailingEmails = data.emails;
 
                 if (data.count === 0) {
                     document.getElementById('mailinglijst-emails').innerHTML = '<p>Geen email adressen gevonden voor de geselecteerde activiteiten.</p>';
+                    document.getElementById('mail-recipient-count').textContent = '0';
                 } else {
                     document.getElementById('mailinglijst-emails').innerHTML = data.emails.join('<br>');
+                    document.getElementById('mail-recipient-count').textContent = data.count;
                 }
 
-                document.getElementById('mailinglijst-result-card').style.display = 'block';
+                const resultCard = document.getElementById('mailinglijst-result-card');
+                resultCard.style.display = 'block';
+                console.log('Mailinglijst result card display:', resultCard.style.display);
+                console.log('Formulier element:', document.getElementById('mailinglijst-send-form'));
             } else {
                 alert('Fout: ' + data.error);
             }
         })
         .catch(error => {
             console.error('Error loading emails:', error);
-            alert('Fout bij ophalen email adressen');
+            console.error('Error details:', error.message, error.stack);
+            alert('Fout bij ophalen email adressen: ' + error.message);
         });
 }
 
-function copyEmailsToClipboard() {
-    const emailsDiv = document.getElementById('mailinglijst-emails');
-    const emails = emailsDiv.textContent.replace(/<br>/g, '\n');
+// Store current mailing emails
+let currentMailingEmails = [];
 
-    navigator.clipboard.writeText(emails).then(() => {
-        alert('Email adressen gekopieerd naar klembord!');
-    }).catch(err => {
-        console.error('Copy failed:', err);
-        alert('Kopiëren mislukt. Selecteer handmatig de emails en kopieer ze.');
-    });
+function showEmailComposeForm() {
+    const emailsDiv = document.getElementById('mailinglijst-emails');
+    if (!emailsDiv) return;
+
+    currentMailingEmails = emailsDiv.textContent.trim().split('\n').filter(e => e.trim());
+    if (currentMailingEmails.length === 0) {
+        alert('Geen email adressen geselecteerd.');
+        return;
+    }
+
+    document.getElementById('mail-recipient-count').textContent = currentMailingEmails.length;
+    document.getElementById('mailinglijst-compose-card').style.display = 'block';
+    document.getElementById('mail-onderwerp').value = '';
+    document.getElementById('mail-bericht').value = '';
+    document.getElementById('mail-send-error').textContent = '';
+    document.getElementById('mail-send-success').textContent = '';
+
+    // Scroll to form
+    document.getElementById('mailinglijst-compose-card').scrollIntoView({ behavior: 'smooth' });
 }
 
-function openInMailClient() {
-    const emailsDiv = document.getElementById('mailinglijst-emails');
-    const emails = emailsDiv.textContent.split('\n').filter(e => e.trim()).join(';');
+// Send email via SMTP
+async function sendMailingEmail(event) {
+    event.preventDefault();
 
-    if (emails) {
-        window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}`;
+    const onderwerp = document.getElementById('mail-onderwerp').value.trim();
+    const bericht = document.getElementById('mail-bericht').value.trim();
+    const errorDiv = document.getElementById('mail-send-error');
+    const successDiv = document.getElementById('mail-send-success');
+
+    errorDiv.textContent = '';
+    successDiv.textContent = '';
+
+    if (!onderwerp || !bericht) {
+        errorDiv.textContent = 'Onderwerp en bericht zijn verplicht.';
+        return;
+    }
+
+    if (currentMailingEmails.length === 0) {
+        errorDiv.textContent = 'Geen email adressen geselecteerd.';
+        return;
+    }
+
+    try {
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Verzenden...';
+
+        const response = await fetch('/php/mailinglijst.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                onderwerp,
+                bericht,
+                emails: currentMailingEmails
+            })
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Raw response:', responseText);
+            throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 100));
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';
+
+        if (data.success) {
+            successDiv.textContent = `Mail succesvol verzonden naar ${currentMailingEmails.length} ontvangers!`;
+            // Clear form after 3 seconds
+            setTimeout(() => {
+                document.getElementById('mail-onderwerp').value = '';
+                document.getElementById('mail-bericht').value = '';
+                successDiv.textContent = '';
+            }, 3000);
+        } else {
+            errorDiv.textContent = data.message || 'Fout bij verzenden email.';
+        }
+    } catch (error) {
+        console.error('Error sending email:', error);
+        console.error('Error type:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        errorDiv.textContent = 'Netwerkfout bij verzenden email: ' + error.message;
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';
     }
 }

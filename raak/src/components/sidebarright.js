@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import SmakelijkWandelenPage from './activiteiten/smakelijk_wandelen';
 
 // Sidebar Right Component
 function SidebarRight() {
@@ -126,15 +125,16 @@ function SidebarRight() {
       {isInschrijvingOpen && (
         <div className="lightbox-overlay" onClick={() => setIsInschrijvingOpen(false)}>
           <div className="lightbox-content modal-form" onClick={(e) => e.stopPropagation()} style={{
-            maxWidth: '600px',
+            maxWidth: '900px',
             maxHeight: '90vh',
             overflow: 'auto',
             background: 'white',
-            padding: '20px',
+            padding: '0',
             borderRadius: '10px'
           }}>
-            <button className="lightbox-close" onClick={() => setIsInschrijvingOpen(false)}>×</button>
-            <SmakelijkWandelenPage />
+            <button className="lightbox-close" onClick={() => setIsInschrijvingOpen(false)} style={{position: 'absolute', right: 10, top: 10, zIndex: 10}}>×</button>
+            {/* Use the single public form so both public site and bestuur/sidebar use the exact same markup and behavior */}
+            <iframe src="/form_smakelijk_wandelen.html" title="Inschrijving Smakelijk Wandelen" style={{width: '100%', height: '720px', border: 'none', display: 'block'}} />
           </div>
         </div>
       )}

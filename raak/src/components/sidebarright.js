@@ -3,9 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Sidebar Right Component
 function SidebarRight() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isInschrijvingOpen, setIsInschrijvingOpen] = useState(false);
   const [futureActivities, setFutureActivities] = useState([]);
-  const [showInschrijvingButton, setShowInschrijvingButton] = useState(false);
   const [inschrijvingActivity, setInschrijvingActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   // new: track which image is selected for the lightbox
@@ -37,7 +35,6 @@ function SidebarRight() {
           });
 
           if (smakelijkWandelenWithInschrijving) {
-            setShowInschrijvingButton(true);
             setInschrijvingActivity(smakelijkWandelenWithInschrijving);
           }
         }
@@ -86,21 +83,6 @@ function SidebarRight() {
     borderRadius: '6px'
   };
 
-  // button style: ensure visible and full width
-  const btnStyle = {
-    width: '100%',
-    padding: '10px 12px',
-    background: '#ebe24c',
-    color: '#2c3e50',
-    border: 'none',
-    borderRadius: '5px',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    marginTop: '10px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-  };
-
   return (
     <>
       <aside className="sidebar sidebar-right" style={{ padding: '12px' }}>
@@ -138,16 +120,6 @@ function SidebarRight() {
           />
         )}
 
-        {/* Inschrijvingsknop: altijd zichtbaar wanneer inschrijving actief */}
-        {showInschrijvingButton && inschrijvingActivity && (
-          <button
-            className="btn-inschrijven"
-            onClick={() => setIsInschrijvingOpen(true)}
-            style={btnStyle}
-          >
-            Inschrijving {inschrijvingActivity.name} — {new Date(inschrijvingActivity.date).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </button>
-        )}
       </aside>
 
       {/* Lightbox voor foto; show selectedImage */}
@@ -165,23 +137,6 @@ function SidebarRight() {
         </div>
       )}
 
-      {/* Modal voor inschrijving Smakelijk Wandelen */}
-      {isInschrijvingOpen && (
-        <div className="lightbox-overlay" onClick={() => setIsInschrijvingOpen(false)}>
-          <div className="lightbox-content modal-form" onClick={(e) => e.stopPropagation()} style={{
-            maxWidth: '900px',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            background: 'white',
-            padding: '0',
-            borderRadius: '10px'
-          }}>
-            <button className="lightbox-close" onClick={() => setIsInschrijvingOpen(false)} style={{position: 'absolute', right: 10, top: 10, zIndex: 10}}>×</button>
-            {/* Use the single public form so both public site and bestuur/sidebar use the exact same markup and behavior */}
-            <iframe src="/form_smakelijk_wandelen.html" title="Inschrijving Smakelijk Wandelen" style={{width: '100%', height: '720px', border: 'none', display: 'block'}} />
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -1084,6 +1084,13 @@ function displayInschrijvingenTable(data) {
     const container = document.getElementById('inschrijvingen-table');
     const title = document.getElementById('inschrijvingen-title');
     const formLink = document.getElementById('inschrijving-form-link');
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
 
     // Format datum
     const datum = new Date(data.date).toLocaleDateString('nl-BE', {
@@ -1149,7 +1156,7 @@ function displayInschrijvingenTable(data) {
     data.data.forEach(row => {
         html += '<tr>';
         visibleKolommen.forEach(col => {
-            html += `<td>${row[col] || '-'}</td>`;
+            html += `<td>${escapeHtml(row[col] || '-')}</td>`;
         });
         if (canEdit && row.id) {
             html += '<td>';

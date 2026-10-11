@@ -116,9 +116,9 @@ try {
             if ($isGenericRegistration) {
                 $registrationSchema = getCalendarInschrijvingenSchema($pdo);
                 $tabelNaam = 'calendar_inschrijvingen';
-                $kolommen = ['id', $registrationSchema['activity'], 'naam', 'email', $registrationSchema['people']];
+                $kolommen = ['id', $registrationSchema['activity'], 'naam', 'email', $registrationSchema['people'], 'info'];
                 $dataStmt = $pdo->prepare("
-                    SELECT id, {$registrationSchema['activity']}, naam, email, {$registrationSchema['people']}
+                    SELECT id, {$registrationSchema['activity']}, naam, email, {$registrationSchema['people']}, info
                     FROM calendar_inschrijvingen
                     WHERE {$registrationSchema['activity']} = :id_act
                     ORDER BY id ASC

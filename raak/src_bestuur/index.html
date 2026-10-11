@@ -223,6 +223,28 @@
                   <label for="new-act-verantwoordelijke">Verantwoordelijke</label>
                   <input type="text" id="new-act-verantwoordelijke" />
                 </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="new-act-inschrijvingen" />
+                    Inschrijvingen inschakelen
+                  </label>
+                </div>
+                <div id="new-act-inschrijvingen-fields">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="new-act-inschrijvingen-aantal">Maximumaantal inschrijvingen *</label>
+                      <input type="number" id="new-act-inschrijvingen-aantal" min="1" step="1" required disabled />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-act-inschrijvingen-start">Startdatum inschrijvingen *</label>
+                      <input type="date" id="new-act-inschrijvingen-start" required disabled />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-act-inschrijvingen-end">Einddatum inschrijvingen *</label>
+                      <input type="date" id="new-act-inschrijvingen-end" required disabled />
+                    </div>
+                  </div>
+                </div>
                 <button type="submit" class="btn-primary">Activiteit Toevoegen</button>
               </form>
             </div>

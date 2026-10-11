@@ -1,8 +1,8 @@
 <?php
 // Database configuratie voor one.com
-$host = 'raakachterbos.be.mysql';
-$dbname = 'raakachterbos_beraak';
-$username = 'raakachterbos_beraak';
+$host = 'localhost';
+$dbname = 'cftvsokaf_raakachterbos_beraak';
+$username = 'cftvsokaf_raakachterbos_beraak';
 $password = '15chapels@bos';
 
 try {

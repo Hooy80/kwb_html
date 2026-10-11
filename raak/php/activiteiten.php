@@ -15,6 +15,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'db_connect.php';
 
+function getRegistrationFields($input) {
+    if (!is_array($input)) {
+        throw new InvalidArgumentException('Ongeldige invoer');
+    }
+
+    $enabled = $input['inschrijvingen'] ?? 0;
+    if (!in_array($enabled, [0, 1, '0', '1', false, true], true)) {
+        throw new InvalidArgumentException('Ongeldige instelling voor inschrijvingen');
+    }
+
+    if ((int)$enabled === 0) {
+        return [
+            'inschrijvingen' => 0,
+            'inschrijvingen_aantal' => 0,
+            'inschrijvingen_start' => '0000-00-00',
+            'inschrijvingen_end' => '0000-00-00'
+        ];
+    }
+
+    $aantal = filter_var($input['inschrijvingen_aantal'] ?? null, FILTER_VALIDATE_INT);
+    if ($aantal === false || $aantal < 1) {
+        throw new InvalidArgumentException('Vul een geldig maximumaantal inschrijvingen in');
+    }
+
+    $start = $input['inschrijvingen_start'] ?? '';
+    $end = $input['inschrijvingen_end'] ?? '';
+    $parsedStart = is_string($start) ? DateTime::createFromFormat('!Y-m-d', $start) : false;
+    $parsedEnd = is_string($end) ? DateTime::createFromFormat('!Y-m-d', $end) : false;
+    if (!$parsedStart || $parsedStart->format('Y-m-d') !== $start ||
+        !$parsedEnd || $parsedEnd->format('Y-m-d') !== $end) {
+        throw new InvalidArgumentException('Vul een geldige start- en einddatum voor de inschrijvingen in');
+    }
+    if ($end < $start) {
+        throw new InvalidArgumentException('De einddatum van de inschrijvingen mag niet voor de startdatum liggen');
+    }
+
+    return [
+        'inschrijvingen' => 1,
+        'inschrijvingen_aantal' => $aantal,
+        'inschrijvingen_start' => $start,
+        'inschrijvingen_end' => $end
+    ];
+}
+
 // Check of gebruiker ingelogd is
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'error' => 'Niet ingelogd']);
@@ -33,10 +77,11 @@ try {
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
+        $registration = getRegistrationFields($input);
         
         $stmt = $pdo->prepare("
-            INSERT INTO calendar (date, name, start_hour, stop_hour, place, comment, info, inschrijving, verantwoordelijke)
-            VALUES (:date, :name, :start_hour, :stop_hour, :place, :comment, :info, :inschrijving, :verantwoordelijke)
+            INSERT INTO calendar (date, name, start_hour, stop_hour, place, comment, info, inschrijving, verantwoordelijke, inschrijving_aantal, inschrijving_start, inschrijving_end)
+            VALUES (:date, :name, :start_hour, :stop_hour, :place, :comment, :info, :inschrijving, :verantwoordelijke, :inschrijving_aantal, :inschrijving_start, :inschrijving_end)
         ");
         
         $stmt->execute([
@@ -47,8 +92,11 @@ try {
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
             'info' => $input['info'] ?? '',
-            'inschrijving' => $input['inschrijving'] ?? 0,
-            'verantwoordelijke' => $input['verantwoordelijke'] ?? null
+            'inschrijving' => $registration['inschrijvingen'],
+            'verantwoordelijke' => $input['verantwoordelijke'] ?? null,
+            'inschrijving_aantal' => $registration['inschrijvingen_aantal'],
+            'inschrijving_start' => $registration['inschrijvingen_start'],
+            'inschrijving_end' => $registration['inschrijvingen_end']
         ]);
 
         echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
@@ -68,6 +116,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'ID ontbreekt']);
             exit;
         }
+        $registration = getRegistrationFields($input);
 
         $stmt = $pdo->prepare("
             UPDATE calendar 
@@ -79,7 +128,10 @@ try {
                 comment = :comment, 
                 info = :info,
                 inschrijving = :inschrijving,
-                verantwoordelijke = :verantwoordelijke
+                verantwoordelijke = :verantwoordelijke,
+                inschrijving_aantal = :inschrijving_aantal,
+                inschrijving_start = :inschrijving_start,
+                inschrijving_end = :inschrijving_end
             WHERE id = :id
         ");
         
@@ -92,8 +144,11 @@ try {
             'place' => $input['place'] ?? null,
             'comment' => $input['comment'] ?? null,
             'info' => $input['info'] ?? '',
-            'inschrijving' => $input['inschrijving'] ?? 0,
-            'verantwoordelijke' => $input['verantwoordelijke'] ?? null
+            'inschrijving' => $registration['inschrijvingen'],
+            'verantwoordelijke' => $input['verantwoordelijke'] ?? null,
+            'inschrijving_aantal' => $registration['inschrijvingen_aantal'],
+            'inschrijving_start' => $registration['inschrijvingen_start'],
+            'inschrijving_end' => $registration['inschrijvingen_end']
         ]);
 
         echo json_encode(['success' => true]);
@@ -120,6 +175,9 @@ try {
         echo json_encode(['success' => true]);
     }
     
+} catch (InvalidArgumentException $e) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Server fout: ' . $e->getMessage()]);
 }

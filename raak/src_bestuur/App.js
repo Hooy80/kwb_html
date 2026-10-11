@@ -55,6 +55,12 @@ function setupEventListeners() {
         console.log('✓ Logout button listener attached');
     }
 
+    const registrationCheckbox = document.getElementById('new-act-inschrijvingen');
+    if (registrationCheckbox) {
+        registrationCheckbox.addEventListener('change', toggleInschrijvingenFields);
+        toggleInschrijvingenFields();
+    }
+
     // Navigation links
     const navLinks = document.querySelectorAll('.nav-link');
     console.log('Nav links found:', navLinks.length);
@@ -319,7 +325,7 @@ async function loadInschrijvingenStats() {
                     // Bereken totaal aantal inschrijvingen
                     let totalInschrijvingen = 0;
                     const visibleKolommen = dataResult.kolommen.filter(col =>
-                        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act'
+                        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act' && col.toLowerCase() !== 'id_cal'
                     );
 
                     visibleKolommen.forEach(col => {
@@ -384,17 +390,14 @@ function navigateToInschrijving(activityName, jaar) {
     // Wacht tot de pagina geladen is en selecteer dan de activiteit
     setTimeout(() => {
         const select = document.getElementById('inschrijving-select');
-        select.value = activityName;
-        select.dispatchEvent(new Event('change'));
-
-        // Als er een jaar dropdown is, selecteer het jaar
-        setTimeout(() => {
-            const jaarSelect = document.getElementById('jaar-select');
-            if (jaarSelect && jaarSelect.style.display !== 'none') {
-                jaarSelect.value = jaar;
-                jaarSelect.dispatchEvent(new Event('change'));
-            }
-        }, 100);
+        const option = Array.from(select.options).find(item =>
+            item.dataset.activityName === activityName &&
+            (!jaar || item.dataset.year === String(jaar))
+        );
+        if (option) {
+            select.value = option.value;
+            select.dispatchEvent(new Event('change'));
+        }
     }, 100);
 }
 
@@ -475,7 +478,6 @@ async function loadActiviteiten() {
 
     // Setup form handler
     document.getElementById('add-activiteit-form').onsubmit = handleAddActiviteit;
-
     // Laad activiteiten voor huidig werkjaar
     loadActiviteitenForWerkjaar();
 }
@@ -739,6 +741,47 @@ function deleteBericht(berichtId, onderwerp) {
 }
 
 // Activity management functions
+function toggleInschrijvingenFields() {
+    const enabled = document.getElementById('new-act-inschrijvingen').checked;
+    const fields = document.getElementById('new-act-inschrijvingen-fields');
+    const aantal = document.getElementById('new-act-inschrijvingen-aantal');
+    const start = document.getElementById('new-act-inschrijvingen-start');
+    const end = document.getElementById('new-act-inschrijvingen-end');
+
+    fields.hidden = false;
+    aantal.disabled = !enabled;
+    start.disabled = !enabled;
+    end.disabled = !enabled;
+    aantal.required = enabled;
+    start.required = enabled;
+    end.required = enabled;
+
+    if (!enabled) {
+        aantal.value = '';
+        start.value = '';
+        end.value = '';
+    }
+}
+
+function getInschrijvingenFormData() {
+    const enabled = document.getElementById('new-act-inschrijvingen').checked;
+    const aantal = document.getElementById('new-act-inschrijvingen-aantal').value;
+    const start = document.getElementById('new-act-inschrijvingen-start').value;
+    const end = document.getElementById('new-act-inschrijvingen-end').value;
+
+    if (enabled && (!aantal || Number(aantal) < 1 || !Number.isInteger(Number(aantal)) || !start || !end || end < start)) {
+        alert('Vul een geldig maximumaantal en een geldige start- en einddatum voor de inschrijvingen in');
+        return null;
+    }
+
+    return {
+        inschrijvingen: enabled ? 1 : 0,
+        inschrijvingen_aantal: enabled ? Number(aantal) : null,
+        inschrijvingen_start: enabled ? start : null,
+        inschrijvingen_end: enabled ? end : null
+    };
+}
+
 function handleAddActiviteit(e) {
     e.preventDefault();
 
@@ -750,11 +793,13 @@ function handleAddActiviteit(e) {
     const comment = document.getElementById('new-act-comment').value || null;
     const info = document.getElementById('new-act-info').value || null;
     const verantwoordelijke = document.getElementById('new-act-verantwoordelijke').value || null;
+    const registration = getInschrijvingenFormData();
 
     if (!date || !name) {
         alert('Datum en naam zijn verplicht');
         return;
     }
+    if (!registration) return;
 
     fetch('/php/activiteiten.php', {
         method: 'POST',
@@ -767,7 +812,8 @@ function handleAddActiviteit(e) {
             place,
             comment,
             info,
-            verantwoordelijke
+            verantwoordelijke,
+            ...registration
         })
     })
         .then(response => response.json())
@@ -775,6 +821,7 @@ function handleAddActiviteit(e) {
             if (data.success) {
                 alert('Activiteit toegevoegd!');
                 document.getElementById('add-activiteit-form').reset();
+                toggleInschrijvingenFields();
                 loadActiviteiten();
                 loadDashboardStats();
             } else {
@@ -808,6 +855,11 @@ function editActiviteit(activityId) {
             document.getElementById('new-act-comment').value = activity.comment || '';
             document.getElementById('new-act-info').value = activity.info || '';
             document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
+            document.getElementById('new-act-inschrijvingen').checked = Number(activity.inschrijvingen) === 1;
+            document.getElementById('new-act-inschrijvingen-aantal').value = activity.inschrijvingen_aantal || '';
+            document.getElementById('new-act-inschrijvingen-start').value = activity.inschrijvingen_start || '';
+            document.getElementById('new-act-inschrijvingen-end').value = activity.inschrijvingen_end || '';
+            toggleInschrijvingenFields();
 
             // Change form submit handler to update instead of add
             const form = document.getElementById('add-activiteit-form');
@@ -822,6 +874,8 @@ function editActiviteit(activityId) {
                 const comment = document.getElementById('new-act-comment').value || null;
                 const info = document.getElementById('new-act-info').value || null;
                 const verantwoordelijke = document.getElementById('new-act-verantwoordelijke').value || null;
+                const registration = getInschrijvingenFormData();
+                if (!registration) return;
 
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
@@ -835,7 +889,8 @@ function editActiviteit(activityId) {
                         place,
                         comment,
                         info,
-                        verantwoordelijke
+                        verantwoordelijke,
+                        ...registration
                     })
                 })
                     .then(response => response.json())
@@ -843,6 +898,7 @@ function editActiviteit(activityId) {
                         if (data.success) {
                             alert('Activiteit bijgewerkt!');
                             form.reset();
+                            toggleInschrijvingenFields();
                             form.onsubmit = handleAddActiviteit; // Reset to add mode
                             loadActiviteiten();
                             loadDashboardStats();
@@ -886,6 +942,11 @@ function copyActiviteit(activityId) {
             document.getElementById('new-act-comment').value = activity.comment || '';
             document.getElementById('new-act-info').value = activity.info || '';
             document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
+            document.getElementById('new-act-inschrijvingen').checked = Number(activity.inschrijvingen) === 1;
+            document.getElementById('new-act-inschrijvingen-aantal').value = activity.inschrijvingen_aantal || '';
+            document.getElementById('new-act-inschrijvingen-start').value = activity.inschrijvingen_start || '';
+            document.getElementById('new-act-inschrijvingen-end').value = activity.inschrijvingen_end || '';
+            toggleInschrijvingenFields();
 
             // Make sure form is in add mode
             const form = document.getElementById('add-activiteit-form');
@@ -951,84 +1012,41 @@ function loadInschrijvingen() {
                 const select = document.getElementById('inschrijving-select');
                 select.innerHTML = '<option value="">-- Selecteer een activiteit --</option>';
 
-                // Groepeer per unieke activiteitnaam
-                const grouped = {};
-                data.inschrijvingen.forEach(inschrijving => {
+                data.inschrijvingen.forEach(activity => {
                     // Filter voor inschrijving gebruikers: alleen hun specifieke activiteit
                     if (isInschrijvingUser) {
                         // Match de activiteitnaam met de login (zonder spaties, hoofdletters)
-                        const normalizedName = inschrijving.name.replace(/\s+/g, '').toLowerCase();
+                        const normalizedName = activity.name.replace(/\s+/g, '').toLowerCase();
                         const normalizedLogin = allowedActivity.toLowerCase();
                         if (normalizedName !== normalizedLogin) {
                             return; // Skip deze inschrijving
                         }
                     }
 
-                    if (!grouped[inschrijving.name]) {
-                        grouped[inschrijving.name] = {
-                            name: inschrijving.name,
-                            jaren: inschrijving.jaren,
-                            tabel: inschrijving.tabel,
-                            kolommen: inschrijving.kolommen
-                        };
-                    }
-                });
-
-                // Vul dropdown
-                Object.values(grouped).forEach(item => {
                     const option = document.createElement('option');
-                    option.value = item.name;
-                    option.dataset.jaren = JSON.stringify(item.jaren);
-                    option.textContent = item.name;
+                    option.value = activity.id_act;
+                    option.dataset.activityName = activity.name;
+                    option.dataset.year = activity.date.slice(0, 4);
+                    option.textContent = `${activity.date.replace(/-/g, '')} - ${activity.name}`;
                     select.appendChild(option);
                 });
 
-                // Voor inschrijving gebruikers: automatisch selecteren als er maar 1 optie is
-                if (isInschrijvingUser && Object.keys(grouped).length === 1) {
-                    const singleActivity = Object.keys(grouped)[0];
-                    select.value = singleActivity;
-                    select.dispatchEvent(new Event('change'));
-                }
-
                 // Event listener voor activiteit selectie
                 select.onchange = function () {
-                    const selectedOption = this.options[this.selectedIndex];
                     if (this.value) {
-                        const jaren = JSON.parse(selectedOption.dataset.jaren || '[]');
-
-                        if (jaren.length > 1) {
-                            // Toon jaar dropdown
-                            const jaarSelect = document.getElementById('jaar-select');
-                            jaarSelect.innerHTML = '<option value="">-- Selecteer een jaar --</option>';
-                            jaren.forEach(jaar => {
-                                const option = document.createElement('option');
-                                option.value = jaar;
-                                option.textContent = jaar;
-                                jaarSelect.appendChild(option);
-                            });
-                            document.getElementById('jaar-select-container').style.display = 'block';
-                            document.getElementById('inschrijvingen-data-card').style.display = 'none';
-
-                            // Event listener voor jaar selectie
-                            jaarSelect.onchange = function () {
-                                if (this.value) {
-                                    loadInschrijvingenData(select.value, this.value);
-                                }
-                            };
-                        } else if (jaren.length === 1) {
-                            // Direct laden met het enige beschikbare jaar
-                            document.getElementById('jaar-select-container').style.display = 'none';
-                            loadInschrijvingenData(this.value, jaren[0]);
-                        } else {
-                            // Geen jaar beschikbaar, laad zonder jaar filter
-                            document.getElementById('jaar-select-container').style.display = 'none';
-                            loadInschrijvingenData(this.value, '');
-                        }
+                        document.getElementById('jaar-select-container').style.display = 'none';
+                        loadInschrijvingenData(this.value);
                     } else {
                         document.getElementById('jaar-select-container').style.display = 'none';
                         document.getElementById('inschrijvingen-data-card').style.display = 'none';
                     }
                 };
+
+                // Voor inschrijving gebruikers: automatisch selecteren als er maar 1 optie is
+                if (isInschrijvingUser && select.options.length === 2) {
+                    select.selectedIndex = 1;
+                    select.dispatchEvent(new Event('change'));
+                }
             } else {
                 console.error('Error loading inschrijvingen:', data.error);
             }
@@ -1041,8 +1059,8 @@ function loadInschrijvingen() {
     document.getElementById('export-excel-btn').onclick = exportToExcel;
 }
 
-function loadInschrijvingenData(activityName, jaar) {
-    const url = `/php/inschrijvingen.php?action=data&name=${encodeURIComponent(activityName)}&jaar=${jaar}`;
+function loadInschrijvingenData(activityId) {
+    const url = `/php/inschrijvingen.php?action=data&id_act=${encodeURIComponent(activityId)}`;
 
     fetch(url)
         .then(response => response.json())
@@ -1052,7 +1070,8 @@ function loadInschrijvingenData(activityName, jaar) {
                 displayInschrijvingenTable(data);
                 document.getElementById('inschrijvingen-data-card').style.display = 'block';
             } else {
-                alert('Fout: ' + data.error);
+                document.getElementById('inschrijvingen-table').innerHTML = `<p class="error-message">Fout: ${data.error}</p>`;
+                document.getElementById('inschrijvingen-data-card').style.display = 'block';
             }
         })
         .catch(error => {
@@ -1074,19 +1093,26 @@ function displayInschrijvingenTable(data) {
     });
     title.textContent = `${data.activity} - ${datum}`;
 
-    // Toon knop naar formulier (altijd, ongeacht of inschrijving actief is)
-    // Genereer formulier naam op basis van activiteitnaam
+    const isGenericRegistration = data.is_generic_registration === true;
     const formName = data.activity.toLowerCase().replace(/\s+/g, '_');
 
     formLink.href = '#';
     formLink.onclick = (e) => {
         e.preventDefault();
-        openInschrijvingFormulier(formName);
+        if (isGenericRegistration) {
+            openInschrijvingFormulier(formName, data.id_act);
+        } else {
+            openInschrijvingFormulier(formName);
+        }
     };
-    formLink.style.display = 'inline-block';
+    formLink.style.display = isGenericRegistration && (!data.is_open || data.is_full) ? 'none' : 'inline-block';
+
+    const registrationSummary = isGenericRegistration
+        ? `<p><strong>Ingeschreven:</strong> ${data.registered_count} / ${data.inschrijvingen_aantal} personen${!data.is_open ? ' — inschrijvingen gesloten' : data.is_full ? ' — maximum bereikt' : ''}</p>`
+        : '';
 
     if (!data.data || data.data.length === 0) {
-        container.innerHTML = '<p>Geen inschrijvingen gevonden.</p>';
+        container.innerHTML = registrationSummary + '<p>Geen inschrijvingen gevonden.</p>';
         return;
     }
 
@@ -1096,7 +1122,7 @@ function displayInschrijvingenTable(data) {
 
     // Filter kolommen: verberg id en id_act maar bewaar ze in de data
     const visibleKolommen = data.kolommen.filter(col =>
-        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act'
+        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act' && col.toLowerCase() !== 'id_cal'
     );
 
     // Bereken totalen voor kolommen die beginnen met "aantal"
@@ -1162,7 +1188,7 @@ function displayInschrijvingenTable(data) {
         html += `<p style="margin-top: 10px; font-weight: bold;">Totaal aantal inschrijvingen: ${totalInschrijvingen}</p>`;
     }
 
-    container.innerHTML = html;
+    container.innerHTML = registrationSummary + html;
 }
 
 function exportToExcel() {
@@ -1175,7 +1201,7 @@ function exportToExcel() {
 
     // Filter kolommen: verberg id en id_act
     const visibleKolommen = data.kolommen.filter(col =>
-        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act'
+        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act' && col.toLowerCase() !== 'id_cal'
     );
 
     // Maak worksheet data array
@@ -1271,7 +1297,7 @@ function editInschrijving(inschrijvingId) {
 
     // Filter kolommen (zonder id en id_act)
     const editableKolommen = currentInschrijvingenData.kolommen.filter(col =>
-        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act'
+        col.toLowerCase() !== 'id' && col.toLowerCase() !== 'id_act' && col.toLowerCase() !== 'id_cal'
     );
 
     // Maak een eenvoudig edit formulier
@@ -1323,9 +1349,8 @@ function editInschrijving(inschrijvingId) {
                     alert('Inschrijving bijgewerkt!');
                     closeEditModal();
                     // Herlaad data
-                    const activityName = document.getElementById('inschrijving-select').value;
-                    const jaar = document.getElementById('jaar-select').value || document.getElementById('jaar-select').options[0]?.value || '';
-                    loadInschrijvingenData(activityName, jaar);
+                    const activityId = document.getElementById('inschrijving-select').value;
+                    loadInschrijvingenData(activityId);
                 } else {
                     alert('Fout: ' + data.error);
                 }
@@ -1367,9 +1392,8 @@ function deleteInschrijving(inschrijvingId) {
             if (data.success) {
                 alert('Inschrijving verwijderd!');
                 // Herlaad data
-                const activityName = document.getElementById('inschrijving-select').value;
-                const jaar = document.getElementById('jaar-select').value || document.getElementById('jaar-select').options[0]?.value || '';
-                loadInschrijvingenData(activityName, jaar);
+                const activityId = document.getElementById('inschrijving-select').value;
+                loadInschrijvingenData(activityId);
                 // Herlaad dashboard stats
                 loadDashboardStats();
             } else {
@@ -1641,7 +1665,7 @@ function formatTime(timeString) {
     return timeString.substring(0, 5);
 }
 
-function openInschrijvingFormulier(formName) {
+function openInschrijvingFormulier(formName, activityId = null) {
     // Maak modal overlay
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center;';
@@ -1658,7 +1682,9 @@ function openInschrijvingFormulier(formName) {
 
     // Iframe met het formulier
     const iframe = document.createElement('iframe');
-    iframe.src = `/form_${formName}.html`;
+    iframe.src = activityId
+        ? `/php/calendar_inschrijvingen.php?id_act=${encodeURIComponent(activityId)}`
+        : `/form_${formName}.html`;
     iframe.style.cssText = 'width: 100%; height: 750px; border: none; display: block;';
 
     modal.appendChild(closeBtn);
@@ -1858,4 +1884,3 @@ async function sendMailingEmail(event) {
         submitBtn.innerHTML = '<i class="fa fa-send"></i> Verstuur naar <span id="mail-recipient-count">' + currentMailingEmails.length + '</span> ontvangers';
     }
 }
-

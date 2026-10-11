@@ -34,6 +34,9 @@ try {
                 comment,
                 info,
                 inschrijving,
+                inschrijving_aantal,
+                inschrijving_start,
+                inschrijving_end,
                 CASE 
                     WHEN date < CURDATE() THEN 'past'
                     WHEN date = CURDATE() THEN 'today'
@@ -62,6 +65,9 @@ try {
                 comment,
                 info,
                 inschrijving,
+                inschrijving_aantal,
+                inschrijving_start,
+                inschrijving_end,
                 CASE 
                     WHEN date < CURDATE() THEN 'past'
                     WHEN date = CURDATE() THEN 'today'
@@ -130,6 +136,10 @@ try {
             'comment' => $activity['comment'],
             'info' => $activity['info'],
             'inschrijving' => (int)$activity['inschrijving'],
+            'inschrijvingen' => (int)$activity['inschrijving'],
+            'inschrijvingen_aantal' => $activity['inschrijving_aantal'] === null ? null : (int)$activity['inschrijving_aantal'],
+            'inschrijvingen_start' => $activity['inschrijving_start'],
+            'inschrijvingen_end' => $activity['inschrijving_end'],
             'status' => $activity['status'],
             'daysAgo' => (int)$activity['days_ago'],
             'photoExtension' => $photoExtension,

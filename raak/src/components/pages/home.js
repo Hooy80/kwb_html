@@ -79,36 +79,6 @@ function HomePage() {
       <h1>Welkom bij RAAK Achterbos</h1>
       <p>Een warme gemeenschap in beweging</p>
 
-      <h2>Binnenkort bij RAAK</h2>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'flex-start' }}>
-        {loading ? (
-          <p>Loading activities…</p>
-        ) : error ? (
-          <p style={{ color: 'red' }}>Fout bij laden activiteiten: {error}</p>
-        ) : activities.length === 0 ? (
-          <p>Geen aankomende activiteiten.</p>
-        ) : (
-          activities.map((item, idx) => {
-            const fname = filenameOf(item);
-            if (!fname) return null;
-            // show slightly smaller images for sidebar-like display
-            return (
-              <div key={fname + '-' + idx} style={{ textAlign: 'center' }}>
-                <img
-                  src={`${process.env.PUBLIC_URL}/activities/${fname}`}
-                  alt={item.label || item.name || fname}
-                  title={`${item.label || item.name || ''} — ${item.date || ''}`}
-                  style={{ width: '180px', maxWidth: '22vw', margin: '5px', cursor: 'pointer', height: 'auto', objectFit: 'cover' }}
-                  onClick={() => window.open(`${process.env.PUBLIC_URL}/activities/${fname}`, '_blank')}
-                />
-                <div style={{ fontSize: '0.9rem' }}>{item.label || item.name || ''}</div>
-                <div style={{ fontSize: '0.9rem', color: '#666' }}>{item.date}</div>
-              </div>
-            );
-          })
-        )}
-      </div>
     </section>
   );
 }

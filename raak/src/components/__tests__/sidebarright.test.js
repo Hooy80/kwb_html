@@ -42,6 +42,23 @@ describe('SidebarRight', () => {
     expect(img).toBeTruthy();
   });
 
+  test('renders posters for all upcoming activities with photos', async () => {
+    const activities = [
+      mockActivity,
+      { ...mockActivity, id: 2, name: 'Tweede activiteit', photoFilename: '20251215_tweede.jpg' },
+      { ...mockActivity, id: 3, name: 'Voorbije activiteit', status: 'past', photoFilename: '20251101_voorbije.jpg' }
+    ];
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(activities) })
+    );
+
+    render(<SidebarRight />);
+
+    expect(await screen.findByAltText('Tweede activiteit')).toBeTruthy();
+    expect(screen.getByAltText('Smakelijk Wandelen Test')).toBeTruthy();
+    expect(screen.queryByAltText('Voorbije activiteit')).toBeNull();
+  });
+
   test('shows fallback text when image fails to load', async () => {
     render(<SidebarRight />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
@@ -52,7 +69,7 @@ describe('SidebarRight', () => {
 
     // fallback paragraph with activity name should appear
     await waitFor(() => {
-      expect(screen.getByText(/Smakelijk Wandelen Test/i)).toBeTruthy();
+      expect(screen.getByText(/Smakelijk Wandelen Test/i, { selector: 'p' })).toBeTruthy();
     });
   });
 });

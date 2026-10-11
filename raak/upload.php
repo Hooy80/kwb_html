@@ -6,6 +6,7 @@
 $ftp_server = "ftp.raakachterbos.be";
 $ftp_username = "raakachterbos.be";
 $ftp_password = "Raakachterbos.1";
+$remoteRoot = 'webroots/www';
 
 // Check of er specifieke bestanden opgegeven zijn
 $specificFiles = array_slice($argv, 1);
@@ -73,12 +74,16 @@ if ($selectiveMode) {
     
     foreach ($specificFiles as $file) {
         $uploaded = false;
+        $fileFound = false;
         
         // Check in build/static/js/ (gebouwde React bestanden)
         $buildJsPath = __DIR__ . '/build/static/js/' . basename($file);
         if (file_exists($buildJsPath)) {
+            $fileFound = true;
+            @ftp_mkdir($conn, $remoteRoot . '/static');
+            @ftp_mkdir($conn, $remoteRoot . '/static/js');
             echo "Upload: static/js/" . basename($file) . " ... ";
-            if (@ftp_put($conn, 'static/js/' . basename($file), $buildJsPath, FTP_ASCII)) {
+            if (@ftp_put($conn, $remoteRoot . '/static/js/' . basename($file), $buildJsPath, FTP_ASCII)) {
                 echo "✓\n";
                 $file_count++;
                 $uploaded = true;
@@ -90,8 +95,11 @@ if ($selectiveMode) {
         // Check in build/static/css/
         $buildCssPath = __DIR__ . '/build/static/css/' . basename($file);
         if (file_exists($buildCssPath)) {
+            $fileFound = true;
+            @ftp_mkdir($conn, $remoteRoot . '/static');
+            @ftp_mkdir($conn, $remoteRoot . '/static/css');
             echo "Upload: static/css/" . basename($file) . " ... ";
-            if (@ftp_put($conn, 'static/css/' . basename($file), $buildCssPath, FTP_ASCII)) {
+            if (@ftp_put($conn, $remoteRoot . '/static/css/' . basename($file), $buildCssPath, FTP_ASCII)) {
                 echo "✓\n";
                 $file_count++;
                 $uploaded = true;
@@ -103,9 +111,10 @@ if ($selectiveMode) {
         // Check in php/
         $phpPath = __DIR__ . '/php/' . basename($file);
         if (file_exists($phpPath)) {
+            $fileFound = true;
             echo "Upload: php/" . basename($file) . " ... ";
-            @ftp_mkdir($conn, 'php');
-            if (@ftp_put($conn, 'php/' . basename($file), $phpPath, FTP_ASCII)) {
+            @ftp_mkdir($conn, $remoteRoot . '/php');
+            if (@ftp_put($conn, $remoteRoot . '/php/' . basename($file), $phpPath, FTP_ASCII)) {
                 echo "✓\n";
                 $file_count++;
                 $uploaded = true;
@@ -117,9 +126,10 @@ if ($selectiveMode) {
         // Check in build/ root
         $buildRootPath = __DIR__ . '/build/' . basename($file);
         if (file_exists($buildRootPath)) {
+            $fileFound = true;
             echo "Upload: " . basename($file) . " ... ";
             $mode = (preg_match('/\.(html|css|js|json|txt|map)$/i', $file)) ? FTP_ASCII : FTP_BINARY;
-            if (@ftp_put($conn, basename($file), $buildRootPath, $mode)) {
+            if (@ftp_put($conn, $remoteRoot . '/' . basename($file), $buildRootPath, $mode)) {
                 echo "✓\n";
                 $file_count++;
                 $uploaded = true;
@@ -128,7 +138,7 @@ if ($selectiveMode) {
             }
         }
         
-        if (!$uploaded) {
+        if (!$uploaded && !$fileFound) {
             // Check of het een source file is
             if (strpos($file, 'src/') !== false || strpos($file, './src/') !== false) {
                 echo "⚠ Source bestand: $file\n";
@@ -144,25 +154,25 @@ if ($selectiveMode) {
     // Volledige upload
     echo "Volledige upload modus\n\n";
     echo "Uploaden build naar site root (/)...\n\n";
-    upload_dir($conn, __DIR__ . '/build', '', $file_count, $dir_count);
+    upload_dir($conn, __DIR__ . '/build', $remoteRoot, $file_count, $dir_count);
 
     // Nieuw: upload de statische pages naar root/pages (wijziging van pad)
     echo "\nUploaden public/pages naar /pages...\n\n";
     if (is_dir(__DIR__ . '/public/pages')) {
-        upload_dir($conn, __DIR__ . '/public/pages', 'pages', $file_count, $dir_count);
+        upload_dir($conn, __DIR__ . '/public/pages', $remoteRoot . '/pages', $file_count, $dir_count);
     } else {
         echo "(overslaan) lokale map public/pages niet gevonden\n\n";
     }
 
     echo "\nUploaden PHP naar /php...\n";
-    @ftp_mkdir($conn, 'php');
+    @ftp_mkdir($conn, $remoteRoot . '/php');
 
     // Upload alle PHP bestanden in php folder
     $phpFiles = glob(__DIR__ . '/php/*.php');
     foreach ($phpFiles as $phpFile) {
         $filename = basename($phpFile);
         echo "Upload: $filename ... ";
-        if (@ftp_put($conn, 'php/' . $filename, $phpFile, FTP_ASCII)) {
+        if (@ftp_put($conn, $remoteRoot . '/php/' . $filename, $phpFile, FTP_ASCII)) {
             echo "✓\n";
             $file_count++;
         } else {
@@ -173,14 +183,14 @@ if ($selectiveMode) {
     // Upload bestuur directory (direct vanuit src_bestuur)
     echo "\nUploaden bestuur naar /bestuur...\n";
     if (is_dir(__DIR__ . '/src_bestuur')) {
-        @ftp_mkdir($conn, 'bestuur');
+        @ftp_mkdir($conn, $remoteRoot . '/bestuur');
         $bestuurFiles = glob(__DIR__ . '/src_bestuur/*');
         foreach ($bestuurFiles as $file) {
             if (is_file($file)) {
                 $filename = basename($file);
                 echo "Upload: $filename ... ";
                 $mode = (preg_match('/\.(html|css|js|json|txt)$/i', $filename)) ? FTP_ASCII : FTP_BINARY;
-                if (@ftp_put($conn, 'bestuur/' . $filename, $file, $mode)) {
+                if (@ftp_put($conn, $remoteRoot . '/bestuur/' . $filename, $file, $mode)) {
                     echo "✓\n";
                     $file_count++;
                 } else {

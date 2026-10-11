@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 function SidebarRight() {
   const [isOpen, setIsOpen] = useState(false);
   const [isInschrijvingOpen, setIsInschrijvingOpen] = useState(false);
-  const [nextActivity, setNextActivity] = useState(null);
+  const [futureActivities, setFutureActivities] = useState([]);
   const [showInschrijvingButton, setShowInschrijvingButton] = useState(false);
   const [inschrijvingActivity, setInschrijvingActivity] = useState(null);
   const [loading, setLoading] = useState(true);
+  // new: track which image is selected for the lightbox
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageAlt, setSelectedImageAlt] = useState('');
 
   useEffect(() => {
     fetch(`${process.env.PUBLIC_URL}/php/calendar.php`)
@@ -22,18 +25,14 @@ function SidebarRight() {
             (act.status === 'future' || act.status === 'today') && act.photoFilename
           );
 
-          console.log('Future activities with photo:', futureActivitiesWithPhoto);
-
-          if (futureActivitiesWithPhoto.length > 0) {
-            setNextActivity(futureActivitiesWithPhoto[0]);
-            console.log('Selected activity:', futureActivitiesWithPhoto[0]);
-          }
+          setFutureActivities(futureActivitiesWithPhoto);
 
           // Check of er een Smakelijk Wandelen activiteit is met inschrijving = true
           const smakelijkWandelenWithInschrijving = data.find(act => {
-            const hasSmakelijk = act.name.toLowerCase().includes('smakelijk');
-            const hasWandelen = act.name.toLowerCase().includes('wandelen');
-            const hasInschrijving = act.inschrijving == 1 || act.inschrijving === true || act.inschrijving === "1" || act.inschrijving === "true";
+            const name = (act.name || '').toLowerCase();
+            const hasSmakelijk = name.includes('smakelijk');
+            const hasWandelen = name.includes('wandelen');
+            const hasInschrijving = (Number(act.inschrijving) === 1);
             return hasSmakelijk && hasWandelen && hasInschrijving;
           });
 
@@ -64,59 +63,104 @@ function SidebarRight() {
     );
   }
 
-  const imagePath = nextActivity ? getImagePath(nextActivity) : null;
+  const inschrijvingImagePath = inschrijvingActivity ? getImagePath(inschrijvingActivity) : null;
+  const inscriptionActivityIsUpcoming = futureActivities.some(activity =>
+    (activity.id && inschrijvingActivity && activity.id === inschrijvingActivity.id) ||
+    (activity.photoFilename && inschrijvingActivity && activity.photoFilename === inschrijvingActivity.photoFilename)
+  );
+
+  // small helper to open lightbox for a specific image
+  const openImage = (path, alt) => {
+    setSelectedImage(path);
+    setSelectedImageAlt(alt || '');
+    setIsOpen(true);
+  };
+
+  // image styling: show smaller thumbnails in sidebar
+  const imgStyle = {
+    width: '100%',
+    maxWidth: '220px',
+    height: 'auto',
+    display: 'block',
+    cursor: 'pointer',
+    borderRadius: '6px'
+  };
+
+  // button style: ensure visible and full width
+  const btnStyle = {
+    width: '100%',
+    padding: '10px 12px',
+    background: '#ebe24c',
+    color: '#2c3e50',
+    border: 'none',
+    borderRadius: '5px',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    marginTop: '10px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+  };
 
   return (
     <>
-      <aside className="sidebar sidebar-right">
-        {nextActivity && imagePath && (
+      <aside className="sidebar sidebar-right" style={{ padding: '12px' }}>
+        {futureActivities.map((activity) => {
+          const imagePath = getImagePath(activity);
+          return imagePath && (
+            <img
+              key={activity.id || activity.photoFilename}
+              src={imagePath}
+              alt={activity.name}
+              onClick={() => openImage(imagePath, activity.name)}
+              style={imgStyle}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                const parent = e.target.parentElement;
+                if (parent) parent.insertAdjacentHTML('beforeend', `<p style="padding: 12px; text-align: center;">${activity.name}</p>`);
+              }}
+            />
+          );
+        })}
+
+        {/* Toon ook de affiche voor Smakelijk Wandelen wanneer inschrijving actief is.
+            Als die activiteit al in de lijst staat, toon de affiche niet dubbel. */}
+        {inschrijvingActivity && inschrijvingImagePath && !inscriptionActivityIsUpcoming && (
           <img
-            src={imagePath}
-            alt={nextActivity.name}
-            onClick={() => setIsOpen(true)}
-            style={{ cursor: 'pointer' }}
+            src={inschrijvingImagePath}
+            alt={inschrijvingActivity.name}
+            onClick={() => openImage(inschrijvingImagePath, inschrijvingActivity.name)}
+            style={{ ...imgStyle, marginTop: '10px' }}
             onError={(e) => {
-              // Fallback als foto niet bestaat
               e.target.style.display = 'none';
-              e.target.parentElement.innerHTML = `<p style="padding: 20px; text-align: center;">${nextActivity.name}</p>`;
+              const parent = e.target.parentElement;
+              if (parent) parent.insertAdjacentHTML('beforeend', `<p style="padding: 12px; text-align: center;">${inschrijvingActivity.name}</p>`);
             }}
           />
         )}
 
+        {/* Inschrijvingsknop: altijd zichtbaar wanneer inschrijving actief */}
         {showInschrijvingButton && inschrijvingActivity && (
           <button
             className="btn-inschrijven"
             onClick={() => setIsInschrijvingOpen(true)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#ebe24c',
-              color: '#2c3e50',
-              border: 'none',
-              borderRadius: '5px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'opacity 0.3s'
-            }}
-            onMouseOver={(e) => e.target.style.opacity = '0.9'}
-            onMouseOut={(e) => e.target.style.opacity = '1'}
+            style={btnStyle}
           >
-            Inschrijving {inschrijvingActivity.name} {new Date(inschrijvingActivity.date).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
+            Inschrijving {inschrijvingActivity.name} — {new Date(inschrijvingActivity.date).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
           </button>
         )}
       </aside>
 
-      {/* Lightbox voor foto */}
-      {isOpen && (
+      {/* Lightbox voor foto; show selectedImage */}
+      {isOpen && selectedImage && (
         <div className="lightbox-overlay" onClick={() => setIsOpen(false)}>
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
             <button className="lightbox-close" onClick={() => setIsOpen(false)}>×</button>
             <img
-              src={imagePath}
-              alt={nextActivity.name}
+              src={selectedImage}
+              alt={selectedImageAlt}
+              style={{ maxWidth: '95vw', maxHeight: '85vh', display: 'block' }}
             />
-            <p style={{ color: 'white', marginTop: '10px', textAlign: 'center' }}>{nextActivity.name}</p>
+            <p style={{ color: 'white', marginTop: '10px', textAlign: 'center' }}>{selectedImageAlt}</p>
           </div>
         </div>
       )}

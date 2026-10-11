@@ -90,21 +90,36 @@ try {
     $formattedActivities = array_map(function($activity) {
         // Zoek naar foto in activities folder
         $dateFormatted = str_replace('-', '', $activity['date']); // yyyymmdd
-        $nameFormatted = str_replace(' ', '', $activity['name']); // zonder spaties
-        $baseName = $dateFormatted . '_' . $nameFormatted;
-        
-        $photoExtension = null;
         $activitiesDir = __DIR__ . '/../activities/';
-        
-        // Check verschillende extensies
-        $extensions = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG', 'gif', 'webp'];
-        foreach ($extensions as $ext) {
-            if (file_exists($activitiesDir . $baseName . '.' . $ext)) {
-                $photoExtension = $ext;
-                break;
+
+        $photoFilename = null;
+        $photoExtension = null;
+
+        // Eerste poging: glob op exacte prefix (neemt alle extensies en case-sensitive matches)
+        $pattern = $activitiesDir . $dateFormatted . '_*';
+        $matches = glob($pattern);
+
+        if (!$matches) {
+            // Fallback: case-insensitive search door directory te scannen
+            if (is_dir($activitiesDir)) {
+                $files = scandir($activitiesDir);
+                foreach ($files as $f) {
+                    if ($f === '.' || $f === '..') continue;
+                    // vergelijk begin van de bestandsnaam met de datumprefix, hoofdletterongevoelig
+                    if (stripos($f, $dateFormatted . '_') === 0) {
+                        $matches[] = $activitiesDir . $f;
+                        break;
+                    }
+                }
             }
         }
-        
+
+        if (!empty($matches)) {
+            $found = $matches[0];
+            $photoFilename = basename($found);
+            $photoExtension = pathinfo($found, PATHINFO_EXTENSION);
+        }
+
         return [
             'id' => (int)$activity['id'],
             'date' => $activity['date'],
@@ -118,7 +133,7 @@ try {
             'status' => $activity['status'],
             'daysAgo' => (int)$activity['days_ago'],
             'photoExtension' => $photoExtension,
-            'photoFilename' => $photoExtension ? $baseName . '.' . $photoExtension : null
+            'photoFilename' => $photoFilename
         ];
     }, $activities);
     

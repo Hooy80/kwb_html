@@ -273,11 +273,22 @@
             body: JSON.stringify(formData)
           });
 
-          const data = await response.json();
+          const responseText = await response.text();
+          let data = null;
+
+          if (responseText) {
+            try {
+              data = JSON.parse(responseText);
+            } catch (parseError) {
+              throw new Error('De server gaf geen geldige JSON terug.');
+            }
+          } else {
+            throw new Error('Lege response van de server.');
+          }
 
           if (response.ok && data.success) {
             document.getElementById('success-message').textContent =
-              `Bedankt ${formData.naam}! Je inschrijving is ontvangen.`;
+              data.message || `Bedankt ${formData.naam}! Je inschrijving is ontvangen.`;
             document.getElementById('success-message').style.display = 'block';
             document.getElementById('error-message').style.display = 'none';
             document.getElementById('inschrijving-form').reset();
@@ -287,7 +298,7 @@
             }, 5000);
           } else {
             document.getElementById('error-message').textContent =
-              'Er ging iets mis: ' + (data.error ? data.error : 'Onbekende fout');
+              'Er ging iets mis: ' + (data && data.error ? data.error : 'Onbekende fout');
             document.getElementById('error-message').style.display = 'block';
             document.getElementById('success-message').style.display = 'none';
           }

@@ -6,6 +6,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 // Include database connectie
 require_once __DIR__ . '/db_connect.php';
+require_once __DIR__ . '/smtp_mail.php';
 
 // Lees JSON data
 $rawInput = file_get_contents('php://input');
@@ -90,24 +91,51 @@ try {
         ':mail' => $mail
     ]);
     
-    // Probeer ook email te versturen (optioneel)
-    $to = 'raakmolachterbos@gmail.com';
-    $subject = $onderwerp;
-    $emailBody = "Nieuwe inschrijving Smakelijk Wandelen $currentYear\n\n";
-    $emailBody .= "Van: $naam\n";
-    $emailBody .= "Email: $email\n";
-    $emailBody .= "Aantal personen: $aantal_personen\n";
-    $emailBody .= "Aantal vegetarisch: $aantal_vegi\n\n";
-    $emailBody .= "Opmerking:\n$opmerking\n";
-    $headers = "From: noreply@raakachterbos.be\r\n";
-    $headers .= "Reply-To: $email\r\n";
-    
-    // Email wordt verstuurd maar we reageren niet op het resultaat
-    @mail($to, $subject, $emailBody, $headers);
+    $adminEmail = 'raakmolachterbos@gmail.com';
+    $fromEmail = 'info@raakachterbos.be';
+    $fromName = 'RAAK Achterbos';
+
+    $adminSubject = $onderwerp;
+    $adminEmailBody = "Nieuwe inschrijving Smakelijk Wandelen $currentYear\n\n";
+    $adminEmailBody .= "Van: $naam\n";
+    $adminEmailBody .= "Email: $email\n";
+    $adminEmailBody .= "Aantal personen: $aantal_personen\n";
+    $adminEmailBody .= "Aantal vegetarisch: $aantal_vegi\n\n";
+    $adminEmailBody .= "Opmerking:\n$opmerking\n";
+
+    $confirmationSubject = "Bevestiging inschrijving Smakelijk Wandelen $currentYear";
+    $confirmationBody = "Beste $naam,\n\n";
+    $confirmationBody .= "Bedankt voor uw inschrijving voor Smakelijk Wandelen $currentYear.\n\n";
+    $confirmationBody .= "We ontvingen deze gegevens:\n";
+    $confirmationBody .= "- Email: $email\n";
+    $confirmationBody .= "- Aantal personen: $aantal_personen\n";
+    $confirmationBody .= "- Aantal vegetarisch: $aantal_vegi\n";
+    if ($opmerking !== '') {
+        $confirmationBody .= "- Opmerking: $opmerking\n";
+    }
+    $confirmationBody .= "\nGelieve het juiste bedrag, EUR 10 per persoon, over te schrijven naar RAAK Achterbos op BE38 9795 4059 7472.\n\n";
+    $confirmationBody .= "Met vriendelijke groeten,\n";
+    $confirmationBody .= "RAAK Achterbos";
+
+    $adminMailSent = sendEmail($fromEmail, $fromName, $adminEmail, $adminSubject, $adminEmailBody, $email);
+    $confirmationMailSent = sendEmail($fromEmail, $fromName, $email, $confirmationSubject, $confirmationBody, $adminEmail);
+
+    $message = "Bedankt $naam! Je inschrijving is ontvangen.";
+    if ($confirmationMailSent) {
+        $message .= " Er werd een bevestigingsmail gestuurd naar $email.";
+    } else {
+        $message .= " Je inschrijving is opgeslagen, maar de bevestigingsmail kon niet verstuurd worden.";
+    }
+
+    if (!$adminMailSent) {
+        $message .= " De interne melding kon ook niet verstuurd worden.";
+    }
     
     echo json_encode([
         'success' => true,
-        'message' => 'Bericht ontvangen! We nemen zo snel mogelijk contact op.'
+        'message' => $message,
+        'confirmationMailSent' => $confirmationMailSent,
+        'adminMailSent' => $adminMailSent
     ]);
     
 } catch(PDOException $e) {

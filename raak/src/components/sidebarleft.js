@@ -25,10 +25,7 @@ function SidebarLeft() {
   }, []);
 
   const formUrl = selectedActivity
-    ? (selectedActivity.name.toLowerCase().includes('smakelijk') &&
-      selectedActivity.name.toLowerCase().includes('wandelen')
-      ? '/form_smakelijk_wandelen.html'
-      : `/php/calendar_inschrijvingen.php?id_act=${encodeURIComponent(selectedActivity.id)}`)
+    ? `/php/calendar_inschrijvingen.php?id_act=${encodeURIComponent(selectedActivity.id)}`
     : '';
 
   return (

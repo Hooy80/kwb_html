@@ -141,8 +141,7 @@ try {
             }
 
             $isDroppingRegistration = stripos($inschrijving['name'], 'dropping') !== false;
-            $isSmakelijkRegistration = stripos($inschrijving['name'], 'smakelijk wandelen') !== false;
-            $isGenericRegistration = !$isSmakelijkRegistration;
+            $isGenericRegistration = true;
             $tabelNaam = getActivityRegistrationTableName($inschrijving['name']);
             $tableColumns = getActivityRegistrationColumns($pdo, $tabelNaam);
             $columnNames = array_column($tableColumns, 'Field');
@@ -171,9 +170,13 @@ try {
             $dataStmt->execute($where !== '' ? ['id_act' => $inschrijving['id_act']] : []);
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $peopleColumns = in_array('aantal_personen', $columnNames, true)
-                ? ['aantal_personen']
-                : array_values(array_intersect(['kort', 'lang'], $columnNames));
+            $peopleColumns = array_values(array_intersect(['kort', 'lang'], $columnNames));
+            if (!$peopleColumns && in_array('aantal_personen', $columnNames, true)) {
+                $peopleColumns = ['aantal_personen'];
+            }
+            if (in_array('aantal_vegi', $columnNames, true)) {
+                $peopleColumns[] = 'aantal_vegi';
+            }
             if (!$peopleColumns) {
                 $peopleColumns = array_values(array_filter($columnNames, static function ($column) {
                     return strpos(strtolower($column), 'aantal') === 0;

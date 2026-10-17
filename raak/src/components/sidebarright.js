@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 function SidebarRight() {
   const [isOpen, setIsOpen] = useState(false);
   const [futureActivities, setFutureActivities] = useState([]);
-  const [inschrijvingActivity, setInschrijvingActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   // new: track which image is selected for the lightbox
   const [selectedImage, setSelectedImage] = useState(null);
@@ -24,19 +23,6 @@ function SidebarRight() {
           );
 
           setFutureActivities(futureActivitiesWithPhoto);
-
-          // Check of er een Smakelijk Wandelen activiteit is met inschrijving = true
-          const smakelijkWandelenWithInschrijving = data.find(act => {
-            const name = (act.name || '').toLowerCase();
-            const hasSmakelijk = name.includes('smakelijk');
-            const hasWandelen = name.includes('wandelen');
-            const hasInschrijving = (Number(act.inschrijving) === 1);
-            return hasSmakelijk && hasWandelen && hasInschrijving;
-          });
-
-          if (smakelijkWandelenWithInschrijving) {
-            setInschrijvingActivity(smakelijkWandelenWithInschrijving);
-          }
         }
         setLoading(false);
       })
@@ -59,12 +45,6 @@ function SidebarRight() {
       </aside>
     );
   }
-
-  const inschrijvingImagePath = inschrijvingActivity ? getImagePath(inschrijvingActivity) : null;
-  const inscriptionActivityIsUpcoming = futureActivities.some(activity =>
-    (activity.id && inschrijvingActivity && activity.id === inschrijvingActivity.id) ||
-    (activity.photoFilename && inschrijvingActivity && activity.photoFilename === inschrijvingActivity.photoFilename)
-  );
 
   // small helper to open lightbox for a specific image
   const openImage = (path, alt) => {
@@ -103,22 +83,6 @@ function SidebarRight() {
             />
           );
         })}
-
-        {/* Toon ook de affiche voor Smakelijk Wandelen wanneer inschrijving actief is.
-            Als die activiteit al in de lijst staat, toon de affiche niet dubbel. */}
-        {inschrijvingActivity && inschrijvingImagePath && !inscriptionActivityIsUpcoming && (
-          <img
-            src={inschrijvingImagePath}
-            alt={inschrijvingActivity.name}
-            onClick={() => openImage(inschrijvingImagePath, inschrijvingActivity.name)}
-            style={{ ...imgStyle, marginTop: '10px' }}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const parent = e.target.parentElement;
-              if (parent) parent.insertAdjacentHTML('beforeend', `<p style="padding: 12px; text-align: center;">${inschrijvingActivity.name}</p>`);
-            }}
-          />
-        )}
 
       </aside>
 

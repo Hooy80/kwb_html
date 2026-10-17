@@ -323,7 +323,7 @@ async function loadInschrijvingenStats() {
                     );
 
                     visibleKolommen.forEach(col => {
-                        if (col.toLowerCase().startsWith('aantal')) {
+                        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
                             dataResult.data.forEach(row => {
                                 const value = parseInt(row[col]) || 0;
                                 totalInschrijvingen += value;
@@ -928,6 +928,7 @@ function loadInschrijvingen() {
     // Reset UI
     document.getElementById('inschrijvingen-data-card').style.display = 'none';
     document.getElementById('jaar-select-container').style.display = 'none';
+    document.getElementById('inschrijving-form-share').style.display = 'none';
 
     // Haal huidige gebruiker op voor filtering
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
@@ -958,6 +959,7 @@ function loadInschrijvingen() {
                     if (!grouped[inschrijving.name]) {
                         grouped[inschrijving.name] = {
                             name: inschrijving.name,
+                            id_act: inschrijving.id_act,
                             jaren: inschrijving.jaren,
                             tabel: inschrijving.tabel,
                             kolommen: inschrijving.kolommen
@@ -969,6 +971,7 @@ function loadInschrijvingen() {
                 Object.values(grouped).forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.name;
+                    option.dataset.activityId = item.id_act;
                     option.dataset.jaren = JSON.stringify(item.jaren);
                     option.textContent = item.name;
                     select.appendChild(option);
@@ -985,6 +988,7 @@ function loadInschrijvingen() {
                 select.onchange = function () {
                     const selectedOption = this.options[this.selectedIndex];
                     if (this.value) {
+                        setInschrijvingFormShare(selectedOption.dataset.activityId, this.value);
                         const jaren = JSON.parse(selectedOption.dataset.jaren || '[]');
 
                         if (jaren.length > 1) {
@@ -1018,6 +1022,7 @@ function loadInschrijvingen() {
                     } else {
                         document.getElementById('jaar-select-container').style.display = 'none';
                         document.getElementById('inschrijvingen-data-card').style.display = 'none';
+                        document.getElementById('inschrijving-form-share').style.display = 'none';
                     }
                 };
             } else {
@@ -1065,16 +1070,9 @@ function displayInschrijvingenTable(data) {
     });
     title.textContent = `${data.activity} - ${datum}`;
 
-    // Toon knop naar formulier (altijd, ongeacht of inschrijving actief is)
-    // Genereer formulier naam op basis van activiteitnaam
-    const formName = data.activity.toLowerCase().replace(/\s+/g, '_');
-
-    formLink.href = '#';
-    formLink.onclick = (e) => {
-        e.preventDefault();
-        openInschrijvingFormulier(formName);
-    };
-    formLink.style.display = 'inline-block';
+    formLink.href = getInschrijvingFormUrl(data.id_act);
+    formLink.onclick = null;
+    formLink.style.display = data.is_generic_registration && (!data.inschrijving || !data.is_open || data.is_full) ? 'none' : 'inline-block';
 
     if (!data.data || data.data.length === 0) {
         container.innerHTML = '<p>Geen inschrijvingen gevonden.</p>';
@@ -1093,7 +1091,7 @@ function displayInschrijvingenTable(data) {
     // Bereken totalen voor kolommen die beginnen met "aantal"
     const totals = {};
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal')) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;
@@ -1156,6 +1154,52 @@ function displayInschrijvingenTable(data) {
     container.innerHTML = html;
 }
 
+function getInschrijvingFormUrl(activityId) {
+    return `${window.location.origin}/php/calendar_inschrijvingen.php?id_act=${encodeURIComponent(activityId)}`;
+}
+
+function setInschrijvingFormShare(activityId, activityName) {
+    const shareCard = document.getElementById('inschrijving-form-share');
+    const formLink = document.getElementById('inschrijving-public-link');
+    const qrCode = document.getElementById('inschrijving-qr-code');
+    const downloadButton = document.getElementById('download-inschrijving-qr');
+    const formUrl = getInschrijvingFormUrl(activityId);
+    const qrCodeUrl = new URL('https://api.qrserver.com/v1/create-qr-code/');
+    qrCodeUrl.searchParams.set('size', '440x440');
+    qrCodeUrl.searchParams.set('format', 'jpg');
+    qrCodeUrl.searchParams.set('data', formUrl);
+
+    formLink.href = formUrl;
+    formLink.textContent = formUrl;
+    qrCode.src = qrCodeUrl.toString();
+    shareCard.style.display = 'block';
+    downloadButton.disabled = false;
+    downloadButton.onclick = async () => {
+        downloadButton.disabled = true;
+        try {
+            const response = await fetch(qrCodeUrl.toString());
+            if (!response.ok) {
+                throw new Error(`QR-code aanvragen mislukt (${response.status})`);
+            }
+            const image = await response.blob();
+            const downloadUrl = URL.createObjectURL(image);
+            const downloadLink = document.createElement('a');
+            const safeName = activityName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            downloadLink.href = downloadUrl;
+            downloadLink.download = `inschrijving_${safeName || activityId}_qr.jpg`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            downloadLink.remove();
+            setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        } catch (error) {
+            console.error('QR-code downloaden mislukt:', error);
+            alert('De QR-code kon niet worden gedownload. Probeer het later opnieuw.');
+        } finally {
+            downloadButton.disabled = false;
+        }
+    };
+}
+
 function exportToExcel() {
     if (!currentInschrijvingenData) {
         alert('Geen data om te exporteren');
@@ -1185,7 +1229,7 @@ function exportToExcel() {
     const totals = {};
     let hasTotals = false;
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal')) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;

@@ -55,7 +55,7 @@ describe('SidebarLeft registration buttons', () => {
     });
   });
 
-  test('uses the separate Smakelijk Wandelen form', async () => {
+  test('uses the activity registration form for Smakelijk Wandelen', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve([{
@@ -71,6 +71,6 @@ describe('SidebarLeft registration buttons', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Smakelijk Wandelen' }));
 
     expect(screen.getByTitle('Inschrijving Smakelijk Wandelen').getAttribute('src'))
-      .toBe('/form_smakelijk_wandelen.html');
+      .toBe('/php/calendar_inschrijvingen.php?id_act=13');
   });
 });

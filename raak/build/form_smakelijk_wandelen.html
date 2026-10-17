@@ -119,30 +119,31 @@
       <div id="success-message" style="display: none;" class="success-message"></div>
       <div id="error-message" style="display: none;" class="error-message"></div>
 
-      <form id="inschrijving-form">
+      <form id="inschrijving-form" method="post" action="/php/calendar_inschrijvingen.php">
+        <input type="hidden" id="id_act" name="id_act">
         <div class="form-group">
           <label for="naam">Naam: *</label>
-          <input type="text" id="naam" name="naam" required>
+          <input type="text" id="naam" name="naam" maxlength="254" required>
         </div>
 
         <div class="form-group">
           <label for="email">Email: *</label>
-          <input type="email" id="email" name="email" required>
+          <input type="email" id="email" name="email" maxlength="254" required>
         </div>
 
         <div class="form-group">
           <label for="aantal_personen">Aantal personen: *</label>
-          <input type="number" id="aantal_personen" name="aantal_personen" min="0" required>
+          <input type="number" id="aantal_personen" name="aantal_personen" min="0" step="1" required>
         </div>
 
         <div class="form-group">
           <label for="aantal_vegi">Aantal vegetarisch:</label>
-          <input type="number" id="aantal_vegi" name="aantal_vegi" min="0" value="0">
+          <input type="number" id="aantal_vegi" name="aantal_vegi" min="0" step="1" value="0">
         </div>
 
         <div class="form-group">
           <label for="opmerking">Opmerking:</label>
-          <textarea id="opmerking" name="opmerking"></textarea>
+          <textarea id="opmerking" name="opmerking" maxlength="1000"></textarea>
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
@@ -150,7 +151,7 @@
           <label for="mail" style="margin: 0; font-weight: normal;">Ik ga akkoord met de <a href="alg_vw_smak.html" id="alg-vw-link" rel="noopener noreferrer" onclick="openAlgVW(event)">algemene voorwaarden</a> </label>
         </div>
 
-        <button type="submit">Inschrijven</button>
+        <button type="submit" disabled>Inschrijven</button>
       </form>
     </div>
 
@@ -177,7 +178,11 @@
         .then(response => response.json())
         .then(data => {
           const activities = Array.isArray(data) ? data : (data && data.data ? data.data : []);
-          if (!Array.isArray(activities) || activities.length === 0) return;
+          if (!Array.isArray(activities) || activities.length === 0) {
+            document.getElementById('activity-info').textContent = 'Er is momenteel geen activiteit met actieve inschrijvingen.';
+            document.querySelector('#inschrijving-form button[type="submit"]').disabled = true;
+            return;
+          }
 
           // Filter op naam (smakelijk && wandelen) EN alleen actieve inschrijvingen
           // Helper: normalize inschrijving to boolean
@@ -213,9 +218,8 @@
 
            // Als geen matches: fallback 10 mei huidig jaar
            if (matches.length === 0) {
-             const defaultDate = new Date(today.getFullYear(), 4, 10); // mei = 4 (0-based months)
-             const datum = defaultDate.toLocaleDateString('nl-BE', { year: 'numeric', month: 'long', day: 'numeric' });
-             document.getElementById('activity-info').innerHTML = `<strong>${datum}</strong>`;
+             document.getElementById('activity-info').textContent = 'Er is momenteel geen activiteit met actieve inschrijvingen.';
+             document.querySelector('#inschrijving-form button[type="submit"]').disabled = true;
              return;
            }
 
@@ -242,6 +246,8 @@
            }
 
            if (activity) {
+             document.getElementById('id_act').value = activity.id;
+              document.querySelector('#inschrijving-form button[type="submit"]').disabled = false;
              const d = activity._dateObj || parseDateOnly(activity.date);
              const datum = d ? d.toLocaleDateString('nl-BE', {
                year: 'numeric',
@@ -251,64 +257,11 @@
              document.getElementById('activity-info').innerHTML = `<strong>${datum}</strong>${activity.place ? ' - ' + activity.place : ''}`;
            }
          })
-         .catch(err => console.error('Fout bij laden activiteit:', err));
-
-      // Form submit handler
-      document.getElementById('inschrijving-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const formData = {
-          naam: document.getElementById('naam').value,
-          email: document.getElementById('email').value,
-          aantal_personen: document.getElementById('aantal_personen').value,
-          aantal_vegi: document.getElementById('aantal_vegi').value,
-          opmerking: document.getElementById('opmerking').value,
-          mail: document.getElementById('mail').checked ? 1 : 0
-        };
-
-        try {
-          const response = await fetch('/php/smakelijk_wandelen.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-          });
-
-          const responseText = await response.text();
-          let data = null;
-
-          if (responseText) {
-            try {
-              data = JSON.parse(responseText);
-            } catch (parseError) {
-              throw new Error('De server gaf geen geldige JSON terug.');
-            }
-          } else {
-            throw new Error('Lege response van de server.');
-          }
-
-          if (response.ok && data.success) {
-            document.getElementById('success-message').textContent =
-              data.message || `Bedankt ${formData.naam}! Je inschrijving is ontvangen.`;
-            document.getElementById('success-message').style.display = 'block';
-            document.getElementById('error-message').style.display = 'none';
-            document.getElementById('inschrijving-form').reset();
-
-            setTimeout(() => {
-              document.getElementById('success-message').style.display = 'none';
-            }, 5000);
-          } else {
-            document.getElementById('error-message').textContent =
-              'Er ging iets mis: ' + (data && data.error ? data.error : 'Onbekende fout');
-            document.getElementById('error-message').style.display = 'block';
-            document.getElementById('success-message').style.display = 'none';
-          }
-        } catch (error) {
-          document.getElementById('error-message').textContent =
-            'Netwerkfout: ' + error.message;
-          document.getElementById('error-message').style.display = 'block';
-          document.getElementById('success-message').style.display = 'none';
-        }
-      });
+         .catch(err => {
+           console.error('Fout bij laden activiteit:', err);
+           document.getElementById('activity-info').textContent = 'De activiteit kon niet worden geladen. Probeer het later opnieuw.';
+           document.querySelector('#inschrijving-form button[type="submit"]').disabled = true;
+         });
     </script>
   </body>
 

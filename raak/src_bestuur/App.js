@@ -1105,7 +1105,7 @@ function displayInschrijvingenTable(data) {
     title.textContent = `${data.activity} - ${datum}`;
 
     const isGenericRegistration = data.is_generic_registration === true;
-    formLink.href = getInschrijvingFormUrl(data.id_act, data.activity);
+    formLink.href = getInschrijvingFormUrl(data.id_act);
     formLink.onclick = null;
     formLink.style.display = isGenericRegistration && (!data.inschrijving || !data.is_open || data.is_full) ? 'none' : 'inline-block';
 
@@ -1193,11 +1193,7 @@ function displayInschrijvingenTable(data) {
     container.innerHTML = registrationSummary + html;
 }
 
-function getInschrijvingFormUrl(activityId, activityName) {
-    const normalizedName = activityName.toLowerCase();
-    if (normalizedName.includes('smakelijk') && normalizedName.includes('wandelen')) {
-        return `${window.location.origin}/form_smakelijk_wandelen.html`;
-    }
+function getInschrijvingFormUrl(activityId) {
     return `${window.location.origin}/php/calendar_inschrijvingen.php?id_act=${encodeURIComponent(activityId)}`;
 }
 
@@ -1206,7 +1202,7 @@ function setInschrijvingFormShare(activityId, activityName) {
     const formLink = document.getElementById('inschrijving-public-link');
     const qrCode = document.getElementById('inschrijving-qr-code');
     const downloadButton = document.getElementById('download-inschrijving-qr');
-    const formUrl = getInschrijvingFormUrl(activityId, activityName);
+    const formUrl = getInschrijvingFormUrl(activityId);
     const qrCodeUrl = new URL('https://api.qrserver.com/v1/create-qr-code/');
     qrCodeUrl.searchParams.set('size', '440x440');
     qrCodeUrl.searchParams.set('format', 'jpg');

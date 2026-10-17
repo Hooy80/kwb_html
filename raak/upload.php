@@ -125,7 +125,7 @@ if ($selectiveMode) {
         
         // Check in build/ root
         $buildRootPath = __DIR__ . '/build/' . basename($file);
-        if (file_exists($buildRootPath)) {
+        if (strpos($file, '/') === false && file_exists($buildRootPath)) {
             $fileFound = true;
             echo "Upload: " . basename($file) . " ... ";
             $mode = (preg_match('/\.(html|css|js|json|txt|map)$/i', $file)) ? FTP_ASCII : FTP_BINARY;
@@ -137,7 +137,36 @@ if ($selectiveMode) {
                 echo "✗\n";
             }
         }
-        
+
+        // Allow targeted uploads of the admin app to its deployed directory.
+        if ($file === 'bestuur/App.js') {
+            $fileFound = true;
+            $adminAppPath = __DIR__ . '/src_bestuur/App.js';
+            @ftp_mkdir($conn, $remoteRoot . '/bestuur');
+            echo "Upload: bestuur/App.js ... ";
+            if (@ftp_put($conn, $remoteRoot . '/bestuur/App.js', $adminAppPath, FTP_ASCII)) {
+                echo "✓\n";
+                $file_count++;
+                $uploaded = true;
+            } else {
+                echo "✗\n";
+            }
+        }
+
+        if ($file === 'bestuur/index.html') {
+            $fileFound = true;
+            $adminIndexPath = __DIR__ . '/src_bestuur/index.html';
+            @ftp_mkdir($conn, $remoteRoot . '/bestuur');
+            echo "Upload: bestuur/index.html ... ";
+            if (@ftp_put($conn, $remoteRoot . '/bestuur/index.html', $adminIndexPath, FTP_ASCII)) {
+                echo "✓\n";
+                $file_count++;
+                $uploaded = true;
+            } else {
+                echo "✗\n";
+            }
+        }
+
         if (!$uploaded && !$fileFound) {
             // Check of het een source file is
             if (strpos($file, 'src/') !== false || strpos($file, './src/') !== false) {

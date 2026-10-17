@@ -12,6 +12,11 @@ function escapeHtml($value): string
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function isDroppingActivity(array $activity): bool
+{
+    return stripos((string)$activity['name'], 'dropping') !== false;
+}
+
 function getRegistrationActivity(PDO $pdo, $activityId, bool $forUpdate = false): ?array
 {
     $id = filter_var($activityId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -35,8 +40,12 @@ function getRegistrationActivity(PDO $pdo, $activityId, bool $forUpdate = false)
 
 function getRegistrationAvailability(PDO $pdo, array $activity): array
 {
-    $schema = getCalendarInschrijvingenSchema($pdo);
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM({$schema['people']}), 0) FROM calendar_inschrijvingen WHERE {$schema['activity']} = :id");
+    if (isDroppingActivity($activity)) {
+        $stmt = $pdo->prepare('SELECT COALESCE(SUM(COALESCE(kort, 0) + COALESCE(lang, 0)), 0) FROM dropping WHERE id_act = :id');
+    } else {
+        $schema = getCalendarInschrijvingenSchema($pdo);
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM({$schema['people']}), 0) FROM calendar_inschrijvingen WHERE {$schema['activity']} = :id");
+    }
     $stmt->execute(['id' => $activity['id']]);
     $registered = (int)$stmt->fetchColumn();
     $capacity = (int)$activity['inschrijving_aantal'];
@@ -72,6 +81,7 @@ function getRegistrationAvailability(PDO $pdo, array $activity): array
 
 function renderRegistrationPage(?array $activity, array $availability, string $message = '', array $values = [], bool $showForm = false, bool $isError = false): void
 {
+    $isDropping = $activity !== null && isDroppingActivity($activity);
     $title = $activity ? $activity['name'] : 'Inschrijven';
     $activityDate = $activity ? date('d/m/Y', strtotime($activity['date'])) : '';
     $comment = $activity ? trim((string)$activity['comment']) : '';
@@ -130,9 +140,17 @@ function renderRegistrationPage(?array $activity, array $availability, string $m
               <input id="naam" name="naam" type="text" maxlength="254" required autocomplete="name" value="<?= escapeHtml($values['naam'] ?? '') ?>">
               <label for="email">E-mailadres</label>
               <input id="email" name="email" type="email" maxlength="254" required autocomplete="email" value="<?= escapeHtml($values['email'] ?? '') ?>">
-              <label for="aantal_personen">Aantal personen</label>
-              <input id="aantal_personen" name="aantal_personen" type="number" min="1" max="<?= (int)($availability['capacity'] - $availability['registered']) ?>" step="1" required value="<?= escapeHtml($values['aantal_personen'] ?? '1') ?>">
-              <small>Je kan maximaal <?= (int)($availability['capacity'] - $availability['registered']) ?> personen inschrijven.</small>
+              <?php if ($isDropping): ?>
+                <label for="kort">Aantal deelnemers korte toer</label>
+                <input id="kort" name="kort" type="number" min="0" max="<?= (int)($availability['capacity'] - $availability['registered']) ?>" step="1" required value="<?= escapeHtml($values['kort'] ?? '0') ?>">
+                <label for="lang">Aantal deelnemers lange toer</label>
+                <input id="lang" name="lang" type="number" min="0" max="<?= (int)($availability['capacity'] - $availability['registered']) ?>" step="1" required value="<?= escapeHtml($values['lang'] ?? '0') ?>">
+                <small>Schrijf minstens één deelnemer in. Er zijn nog <?= (int)($availability['capacity'] - $availability['registered']) ?> plaatsen beschikbaar voor beide toeren samen.</small>
+              <?php else: ?>
+                <label for="aantal_personen">Aantal personen</label>
+                <input id="aantal_personen" name="aantal_personen" type="number" min="1" max="<?= (int)($availability['capacity'] - $availability['registered']) ?>" step="1" required value="<?= escapeHtml($values['aantal_personen'] ?? '1') ?>">
+                <small>Je kan maximaal <?= (int)($availability['capacity'] - $availability['registered']) ?> personen inschrijven.</small>
+              <?php endif; ?>
               <label for="inschrijving_info">Extra info (optioneel)</label>
               <textarea id="inschrijving_info" name="info" maxlength="254"><?= escapeHtml($values['info'] ?? '') ?></textarea>
               <small>Maximaal 254 karakters.</small>
@@ -162,6 +180,8 @@ $values = [
     'naam' => trim((string)($_POST['naam'] ?? '')),
     'email' => trim((string)($_POST['email'] ?? '')),
     'aantal_personen' => trim((string)($_POST['aantal_personen'] ?? '1')),
+    'kort' => trim((string)($_POST['kort'] ?? '0')),
+    'lang' => trim((string)($_POST['lang'] ?? '0')),
     'info' => trim((string)($_POST['info'] ?? ''))
 ];
 
@@ -169,7 +189,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $naam = trim((string)($_POST['naam'] ?? ''));
     $email = trim((string)($_POST['email'] ?? ''));
     $info = trim((string)($_POST['info'] ?? ''));
-    $aantalPersonen = filter_var($_POST['aantal_personen'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $isDropping = isDroppingActivity($activity);
+    $kort = filter_var($_POST['kort'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+    $lang = filter_var($_POST['lang'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+    $aantalPersonen = $isDropping
+        ? (($kort !== false && $lang !== false) ? $kort + $lang : false)
+        : filter_var($_POST['aantal_personen'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     $infoLength = function_exists('mb_strlen') ? mb_strlen($info, 'UTF-8') : strlen($info);
 
     if (!$availability['available']) {
@@ -178,9 +203,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($naam === '' || strlen($naam) > 254 || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254 ||
         $infoLength > 254 ||
-        $aantalPersonen === false || $aantalPersonen > $availability['capacity']) {
+        $aantalPersonen === false || ($isDropping && $aantalPersonen < 1) ||
+        $aantalPersonen > ($availability['capacity'] - $availability['registered'])) {
         http_response_code(400);
-        renderRegistrationPage($activity, $availability, 'Controleer je naam, e-mailadres, het aantal personen en de lengte van je extra info (maximaal 254 tekens).', $values, true, true);
+        $validationMessage = $isDropping
+            ? 'Controleer je naam, e-mailadres, het aantal deelnemers per toer (samen minstens één), je extra info (maximaal 254 tekens) en het beschikbare aantal plaatsen.'
+            : 'Controleer je naam, e-mailadres, het aantal personen en de lengte van je extra info (maximaal 254 tekens).';
+        renderRegistrationPage($activity, $availability, $validationMessage, $values, true, true);
         exit;
     }
 
@@ -199,36 +228,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$availability['available'] || $aantalPersonen > ($availability['capacity'] - $availability['registered'])) {
             $pdo->rollBack();
             if ($availability['available']) {
-                $availability['message'] = 'Er zijn nog maar ' . ($availability['capacity'] - $availability['registered']) . ' plaatsen beschikbaar. Pas het aantal personen aan.';
-                $values['aantal_personen'] = (string)min($aantalPersonen, max(1, $availability['capacity'] - $availability['registered']));
+                $remaining = $availability['capacity'] - $availability['registered'];
+                if (isDroppingActivity($lockedActivity)) {
+                    $availability['message'] = 'Er zijn nog maar ' . $remaining . ' plaatsen beschikbaar. Pas het aantal deelnemers per toer aan.';
+                    $values['kort'] = (string)min((int)$kort, $remaining);
+                    $values['lang'] = (string)min((int)$lang, $remaining - (int)$values['kort']);
+                } else {
+                    $availability['message'] = 'Er zijn nog maar ' . $remaining . ' plaatsen beschikbaar. Pas het aantal personen aan.';
+                    $values['aantal_personen'] = (string)min($aantalPersonen, max(1, $remaining));
+                }
             }
             renderRegistrationPage($lockedActivity, $availability, $availability['message'], $values, $availability['available'], true);
             exit;
         }
 
-        $schema = getCalendarInschrijvingenSchema($pdo);
-        $insertColumns = [$schema['activity'], 'naam', 'email', $schema['people'], 'info'];
-        $insertValues = [':id_cal', ':naam', ':email', ':aantal', ':info'];
-        $insertParams = [
-            'id_cal' => $lockedActivity['id'],
-            'naam' => $naam,
-            'email' => $email,
-            'aantal' => $aantalPersonen,
-            'info' => $info
-        ];
-        if (!$schema['id_auto']) {
-            $lockResult = (int)$pdo->query("SELECT GET_LOCK('raak_calendar_inschrijvingen_id', 10)")->fetchColumn();
-            if ($lockResult !== 1) {
-                throw new PDOException('Kon geen unieke inschrijvings-ID reserveren.');
+        if (isDroppingActivity($lockedActivity)) {
+            $insert = $pdo->prepare('INSERT INTO dropping (id_act, name, email, kort, lang, info) VALUES (:id_act, :name, :email, :kort, :lang, :info)');
+            $insert->execute([
+                'id_act' => $lockedActivity['id'],
+                'name' => $naam,
+                'email' => $email,
+                'kort' => $kort,
+                'lang' => $lang,
+                'info' => $info
+            ]);
+        } else {
+            $schema = getCalendarInschrijvingenSchema($pdo);
+            $insertColumns = [$schema['activity'], 'naam', 'email', $schema['people'], 'info'];
+            $insertValues = [':id_cal', ':naam', ':email', ':aantal', ':info'];
+            $insertParams = [
+                'id_cal' => $lockedActivity['id'],
+                'naam' => $naam,
+                'email' => $email,
+                'aantal' => $aantalPersonen,
+                'info' => $info
+            ];
+            if (!$schema['id_auto']) {
+                $lockResult = (int)$pdo->query("SELECT GET_LOCK('raak_calendar_inschrijvingen_id', 10)")->fetchColumn();
+                if ($lockResult !== 1) {
+                    throw new PDOException('Kon geen unieke inschrijvings-ID reserveren.');
+                }
+                $namedLockAcquired = true;
+                $lastId = $pdo->query('SELECT id FROM calendar_inschrijvingen ORDER BY id DESC LIMIT 1 FOR UPDATE')->fetchColumn();
+                $insertColumns[] = 'id';
+                $insertValues[] = ':id';
+                $insertParams['id'] = $lastId === false ? 1 : (int)$lastId + 1;
             }
-            $namedLockAcquired = true;
-            $lastId = $pdo->query('SELECT id FROM calendar_inschrijvingen ORDER BY id DESC LIMIT 1 FOR UPDATE')->fetchColumn();
-            $insertColumns[] = 'id';
-            $insertValues[] = ':id';
-            $insertParams['id'] = $lastId === false ? 1 : (int)$lastId + 1;
+            $insert = $pdo->prepare('INSERT INTO calendar_inschrijvingen (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $insertValues) . ')');
+            $insert->execute($insertParams);
         }
-        $insert = $pdo->prepare('INSERT INTO calendar_inschrijvingen (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $insertValues) . ')');
-        $insert->execute($insertParams);
         $pdo->commit();
         if ($namedLockAcquired) {
             $pdo->query("SELECT RELEASE_LOCK('raak_calendar_inschrijvingen_id')");
@@ -239,14 +287,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $activityDate = date('d/m/Y', strtotime($lockedActivity['date']));
         $adminSubject = 'Nieuwe inschrijving: ' . $safeActivityName;
         $adminBody = "Nieuwe inschrijving voor {$safeActivityName} ({$activityDate}).\n\n";
-        $adminBody .= "Naam: {$naam}\nE-mailadres: {$email}\nAantal personen: {$aantalPersonen}\n";
+        $adminBody .= "Naam: {$naam}\nE-mailadres: {$email}\n";
+        if ($isDropping) {
+            $adminBody .= "Korte toer: {$kort}\nLange toer: {$lang}\n";
+        } else {
+            $adminBody .= "Aantal personen: {$aantalPersonen}\n";
+        }
         if ($info !== '') {
             $adminBody .= "Extra info: {$info}\n";
         }
         $confirmationSubject = 'Bevestiging inschrijving: ' . $safeActivityName;
         $confirmationBody = "Beste {$naam},\n\n";
         $confirmationBody .= "Je inschrijving voor {$safeActivityName} op {$activityDate} is ontvangen.\n";
-        $confirmationBody .= "Aantal personen: {$aantalPersonen}\n";
+        if ($isDropping) {
+            $confirmationBody .= "Korte toer: {$kort}\nLange toer: {$lang}\n";
+        } else {
+            $confirmationBody .= "Aantal personen: {$aantalPersonen}\n";
+        }
         if ($info !== '') {
             $confirmationBody .= "Extra info: {$info}\n";
         }

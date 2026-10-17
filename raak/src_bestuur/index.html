@@ -347,6 +347,17 @@
             </div>
           </div>
 
+          <div class="card" id="inschrijving-form-share" style="display: none;">
+            <h2>Inschrijvingsformulier delen</h2>
+            <p><a id="inschrijving-public-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+            <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+              <img id="inschrijving-qr-code" alt="QR-code naar het inschrijvingsformulier" width="220" height="220" style="background: #fff; border: 1px solid #ddd; padding: 8px;">
+              <button type="button" id="download-inschrijving-qr" class="btn-secondary">
+                <i class="fa fa-download"></i> Download QR-code (JPG)
+              </button>
+            </div>
+          </div>
+
           <div class="card" id="inschrijvingen-data-card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
               <h2 id="inschrijvingen-title" style="margin: 0;">Inschrijvingen</h2>
@@ -385,7 +396,7 @@
       console.log('=== BESTUUR PAGE LOADED ===');
       console.log('login-form element:', document.getElementById('login-form'));
     </script>
-    <script src="/bestuur/App.js"></script>
+    <script src="/bestuur/App.js?v=20261017-qr1"></script>
     <script>
       // Test of App.js geladen is
       setTimeout(function () {

@@ -17,7 +17,48 @@ if (!isset($_SESSION['user_id'])) {
 
 // Include database connectie
 require_once __DIR__ . '/db_connect.php';
-require_once __DIR__ . '/calendar_inschrijvingen_schema.php';
+
+function getActivityRegistrationTableName(string $activityName): string
+{
+    $tableName = strtolower(trim($activityName));
+    $tableName = preg_replace('/\s+/', '_', $tableName);
+    $tableName = preg_replace('/[^a-z0-9_]/', '_', $tableName);
+    $tableName = trim(preg_replace('/_+/', '_', $tableName), '_');
+
+    if ($tableName === '') {
+        throw new InvalidArgumentException('De activiteit heeft geen geldige tabelnaam.');
+    }
+
+    return $tableName;
+}
+
+function getActivityRegistrationColumns(PDO $pdo, string $tableName): array
+{
+    $columns = $pdo->query("SHOW COLUMNS FROM `$tableName`")->fetchAll(PDO::FETCH_ASSOC);
+    if (!$columns) {
+        throw new PDOException("De tabel `$tableName` heeft geen kolommen.");
+    }
+
+    return $columns;
+}
+
+function getActivityRegistrationPrimaryKey(PDO $pdo, string $tableName): string
+{
+    $columns = getActivityRegistrationColumns($pdo, $tableName);
+    foreach ($columns as $column) {
+        if ($column['Key'] === 'PRI') {
+            return $column['Field'];
+        }
+    }
+
+    foreach ($columns as $column) {
+        if ($column['Field'] === 'id') {
+            return 'id';
+        }
+    }
+
+    throw new PDOException("De tabel `$tableName` heeft geen primaire sleutel.");
+}
 
 try {
     $method = $_SERVER['REQUEST_METHOD'];
@@ -27,18 +68,16 @@ try {
         $action = $_GET['action'] ?? 'list';
 
         if ($action === 'list') {
-            // Toon open inschrijvingen en activiteiten waarvoor al inschrijvingen bestaan.
+            // De activiteitenkeuzelijst volgt de inschrijvingsinstelling op calendar.
             $stmt = $pdo->prepare("
                 SELECT
                     c.id AS id_act,
                     c.name,
                     c.date,
-                    MAX(i.tabel) AS tabel,
-                    MAX(i.kolommen) AS kolommen
+                    NULL AS tabel,
+                    NULL AS kolommen
                 FROM calendar c
-                LEFT JOIN inschrijvingen i ON i.id_act = c.id
-                WHERE c.inschrijving = 1 OR i.id_act IS NOT NULL
-                GROUP BY c.id, c.name, c.date
+                WHERE c.inschrijving = 1
                 ORDER BY c.date DESC, c.id DESC
             ");
             $stmt->execute();
@@ -70,31 +109,21 @@ try {
             if (!empty($activityId)) {
                 $stmt = $pdo->prepare("
                     SELECT
-                        c.id AS id_act,
-                        c.name,
-                        c.date,
-                        c.info,
-                        c.inschrijving,
-                        c.inschrijving_aantal,
-                        c.inschrijving_start,
-                        c.inschrijving_end,
-                        MAX(i.tabel) AS tabel,
-                        MAX(i.kolommen) AS kolommen
+                        c.id AS id_act, c.name, c.date, c.info, c.inschrijving,
+                        c.inschrijving_aantal, c.inschrijving_start, c.inschrijving_end
                     FROM calendar c
-                    LEFT JOIN inschrijvingen i ON i.id_act = c.id
-                    WHERE c.id = :id AND (c.inschrijving = 1 OR i.id_act IS NOT NULL)
-                    GROUP BY c.id, c.name, c.date, c.info, c.inschrijving, c.inschrijving_aantal, c.inschrijving_start, c.inschrijving_end
+                    WHERE c.id = :id AND c.inschrijving = 1
                     LIMIT 1
                 ");
                 $stmt->execute(['id' => $activityId]);
             } else {
                 $stmt = $pdo->prepare("
-                    SELECT i.id_act, i.tabel, i.kolommen, c.name, c.date, c.info,
-                        c.inschrijving, c.inschrijving_aantal, c.inschrijving_start, c.inschrijving_end
-                    FROM inschrijvingen i
-                    JOIN calendar c ON i.id_act = c.id
-                    WHERE c.name = :name
+                    SELECT c.id AS id_act, c.name, c.date, c.info, c.inschrijving,
+                        c.inschrijving_aantal, c.inschrijving_start, c.inschrijving_end
+                    FROM calendar c
+                    WHERE c.name = :name AND c.inschrijving = 1
                     " . (!empty($jaar) ? "AND YEAR(c.date) = :jaar" : "") . "
+                    ORDER BY c.date DESC
                     LIMIT 1
                 ");
 
@@ -111,62 +140,63 @@ try {
                 exit;
             }
 
-            $isGenericRegistration = (int)$inschrijving['inschrijving'] === 1
-                && stripos($inschrijving['name'], 'smakelijk wandelen') === false;
-            if ($isGenericRegistration) {
-                $registrationSchema = getCalendarInschrijvingenSchema($pdo);
-                $tabelNaam = 'calendar_inschrijvingen';
-                $kolommen = ['id', $registrationSchema['activity'], 'naam', 'email', $registrationSchema['people'], 'info'];
-                $dataStmt = $pdo->prepare("
-                    SELECT id, {$registrationSchema['activity']}, naam, email, {$registrationSchema['people']}, info
-                    FROM calendar_inschrijvingen
-                    WHERE {$registrationSchema['activity']} = :id_act
-                    ORDER BY id ASC
-                ");
-                $dataStmt->execute(['id_act' => $inschrijving['id_act']]);
-                $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                $registeredStmt = $pdo->prepare("SELECT COALESCE(SUM({$registrationSchema['people']}), 0) FROM calendar_inschrijvingen WHERE {$registrationSchema['activity']} = :id_act");
-                $registeredStmt->execute(['id_act' => $inschrijving['id_act']]);
-                $registeredCount = (int)$registeredStmt->fetchColumn();
-                $maxRegistrations = (int)$inschrijving['inschrijving_aantal'];
-                $today = date('Y-m-d');
-                $startDate = $inschrijving['inschrijving_start'];
-                $endDate = $inschrijving['inschrijving_end'];
-                $hasStartDate = $startDate && $startDate !== '0000-00-00';
-                $hasEndDate = $endDate && $endDate !== '0000-00-00';
-                $isOpen = (!$hasStartDate || $today >= $startDate) && (!$hasEndDate || $today <= $endDate);
-                $isFull = $maxRegistrations < 1 || $registeredCount >= $maxRegistrations;
-            } else {
-                $kolommen = $inschrijving['kolommen']
-                    ? array_map('trim', explode(',', $inschrijving['kolommen']))
-                    : [];
-                $tabelNaam = $inschrijving['tabel'] ?? null;
-
-                if ($tabelNaam && $kolommen) {
-                    // Haal data op uit de bestaande activiteit-specifieke inschrijvingstabel.
-                    $tabelNaam = preg_replace('/[^a-zA-Z0-9_]/', '', $tabelNaam);
-                    $kolommenStr = implode(', ', array_map(function($col) {
-                        return preg_replace('/[^a-zA-Z0-9_]/', '', $col);
-                    }, $kolommen));
-
-                    $dataStmt = $pdo->prepare("SELECT $kolommenStr FROM $tabelNaam");
-                    $dataStmt->execute();
-                    $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-                } else {
-                    $data = [];
-                }
-
-                $registeredCount = null;
-                $maxRegistrations = null;
-                $isFull = false;
-                $today = date('Y-m-d');
-                $startDate = $inschrijving['inschrijving_start'];
-                $endDate = $inschrijving['inschrijving_end'];
-                $hasStartDate = $startDate && $startDate !== '0000-00-00';
-                $hasEndDate = $endDate && $endDate !== '0000-00-00';
-                $isOpen = (!$hasStartDate || $today >= $startDate) && (!$hasEndDate || $today <= $endDate);
+            $isDroppingRegistration = stripos($inschrijving['name'], 'dropping') !== false;
+            $isSmakelijkRegistration = stripos($inschrijving['name'], 'smakelijk wandelen') !== false;
+            $isGenericRegistration = !$isSmakelijkRegistration;
+            $tabelNaam = getActivityRegistrationTableName($inschrijving['name']);
+            $tableColumns = getActivityRegistrationColumns($pdo, $tabelNaam);
+            $columnNames = array_column($tableColumns, 'Field');
+            $primaryKeyIndex = array_search('PRI', array_column($tableColumns, 'Key'), true);
+            $primaryKey = $primaryKeyIndex === false ? null : $columnNames[$primaryKeyIndex];
+            if ($primaryKey === null) {
+                $primaryKey = in_array('id', $columnNames, true) ? 'id' : null;
             }
+            if ($primaryKey === null) {
+                throw new PDOException("De tabel `$tabelNaam` heeft geen primaire sleutel.");
+            }
+
+            $quotedColumns = array_map(static function ($column) {
+                return '`' . str_replace('`', '``', $column) . '`';
+            }, $columnNames);
+            if ($primaryKey !== 'id') {
+                $quotedColumns[] = "`$primaryKey` AS id";
+                $kolommen = ['id', ...array_values(array_diff($columnNames, [$primaryKey]))];
+            } else {
+                $kolommen = $columnNames;
+            }
+
+            $where = in_array('id_act', $columnNames, true) ? ' WHERE `id_act` = :id_act' : '';
+            $orderBy = $primaryKey !== 'id' ? "`$primaryKey`" : '`id`';
+            $dataStmt = $pdo->prepare('SELECT ' . implode(', ', $quotedColumns) . " FROM `$tabelNaam`$where ORDER BY $orderBy ASC");
+            $dataStmt->execute($where !== '' ? ['id_act' => $inschrijving['id_act']] : []);
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $peopleColumns = in_array('aantal_personen', $columnNames, true)
+                ? ['aantal_personen']
+                : array_values(array_intersect(['kort', 'lang'], $columnNames));
+            if (!$peopleColumns) {
+                $peopleColumns = array_values(array_filter($columnNames, static function ($column) {
+                    return strpos(strtolower($column), 'aantal') === 0;
+                }));
+            }
+            $registeredCount = 0;
+            if ($peopleColumns) {
+                $sumExpression = implode(' + ', array_map(static function ($column) {
+                    return "COALESCE(`$column`, 0)";
+                }, $peopleColumns));
+                $countSql = "SELECT COALESCE(SUM($sumExpression), 0) FROM `$tabelNaam`" . ($where !== '' ? ' WHERE `id_act` = :id_act' : '');
+                $registeredStmt = $pdo->prepare($countSql);
+                $registeredStmt->execute($where !== '' ? ['id_act' => $inschrijving['id_act']] : []);
+                $registeredCount = (int)$registeredStmt->fetchColumn();
+            }
+            $maxRegistrations = $inschrijving['inschrijving_aantal'] === null ? null : (int)$inschrijving['inschrijving_aantal'];
+            $today = date('Y-m-d');
+            $startDate = $inschrijving['inschrijving_start'];
+            $endDate = $inschrijving['inschrijving_end'];
+            $hasStartDate = $startDate && $startDate !== '0000-00-00';
+            $hasEndDate = $endDate && $endDate !== '0000-00-00';
+            $isOpen = (!$hasStartDate || $today >= $startDate) && (!$hasEndDate || $today <= $endDate);
+            $isFull = $maxRegistrations !== null && $maxRegistrations > 0 && $registeredCount >= $maxRegistrations;
 
             echo json_encode([
                 'success' => true,
@@ -180,6 +210,7 @@ try {
                 'inschrijvingen_end' => $endDate,
                 'registered_count' => $registeredCount,
                 'is_generic_registration' => $isGenericRegistration,
+                'is_dropping_registration' => $isDroppingRegistration,
                 'is_open' => $isOpen,
                 'is_full' => $isFull,
                 'tabel' => $tabelNaam,
@@ -221,8 +252,9 @@ try {
             $params[$cleanKey] = $value;
         }
         $params['id'] = $id;
+        $primaryKey = getActivityRegistrationPrimaryKey($pdo, $tabel);
 
-        $sql = "UPDATE $tabel SET " . implode(', ', $setClauses) . " WHERE id = :id";
+        $sql = "UPDATE $tabel SET " . implode(', ', $setClauses) . " WHERE $primaryKey = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
@@ -248,7 +280,8 @@ try {
         // Escape table name
         $tabel = preg_replace('/[^a-zA-Z0-9_]/', '', $tabel);
 
-        $stmt = $pdo->prepare("DELETE FROM $tabel WHERE id = :id");
+        $primaryKey = getActivityRegistrationPrimaryKey($pdo, $tabel);
+        $stmt = $pdo->prepare("DELETE FROM $tabel WHERE $primaryKey = :id");
         $stmt->execute(['id' => $id]);
 
         echo json_encode(['success' => true, 'message' => 'Inschrijving deleted']);

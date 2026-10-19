@@ -323,7 +323,7 @@ async function loadInschrijvingenStats() {
                     );
 
                     visibleKolommen.forEach(col => {
-                        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+                        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
                             dataResult.data.forEach(row => {
                                 const value = parseInt(row[col]) || 0;
                                 totalInschrijvingen += value;
@@ -746,9 +746,19 @@ function handleAddActiviteit(e) {
     const place = document.getElementById('new-act-place').value || null;
     const comment = document.getElementById('new-act-comment').value;
     const info = document.getElementById('new-act-info').value || null
+    const inschrijvingBedrag = document.getElementById('new-act-inschrijvingen-bedrag').value;
+    const inschrijvingBedragNl = document.getElementById('new-act-inschrijvingen-bedrag-nl').value;
 
     if (!date || !name || !comment) {
         alert('Datum, naam en commentaar zijn verplicht');
+        return;
+    }
+    if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(inschrijvingBedrag)) {
+        alert('Vul een geldig inschrijfbedrag in (minimaal 0 euro, maximaal 2 decimalen)');
+        return;
+    }
+    if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(inschrijvingBedragNl)) {
+        alert('Vul een geldig inschrijfbedrag voor niet-leden in (minimaal 0 euro, maximaal 2 decimalen)');
         return;
     }
 
@@ -762,7 +772,9 @@ function handleAddActiviteit(e) {
             stop_hour: stopHour,
             place,
             comment,
-            info
+            info,
+            inschrijving_bedrag: inschrijvingBedrag,
+            inschrijving_bedrag_nl: inschrijvingBedragNl
         })
     })
         .then(response => response.json())
@@ -802,6 +814,8 @@ function editActiviteit(activityId) {
             document.getElementById('new-act-place').value = activity.place || '';
             document.getElementById('new-act-comment').value = activity.comment;
             document.getElementById('new-act-info').value = activity.info || '';
+            document.getElementById('new-act-inschrijvingen-bedrag').value = activity.inschrijving_bedrag || '0';
+            document.getElementById('new-act-inschrijvingen-bedrag-nl').value = activity.inschrijving_bedrag_nl || '0';
 
             // Change form submit handler to update instead of add
             const form = document.getElementById('add-activiteit-form');
@@ -815,6 +829,16 @@ function editActiviteit(activityId) {
                 const place = document.getElementById('new-act-place').value || null;
                 const comment = document.getElementById('new-act-comment').value;
                 const info = document.getElementById('new-act-info').value = activity.info || null;
+                const inschrijvingBedrag = document.getElementById('new-act-inschrijvingen-bedrag').value;
+                const inschrijvingBedragNl = document.getElementById('new-act-inschrijvingen-bedrag-nl').value;
+                if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(inschrijvingBedrag)) {
+                    alert('Vul een geldig inschrijfbedrag in (minimaal 0 euro, maximaal 2 decimalen)');
+                    return;
+                }
+                if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(inschrijvingBedragNl)) {
+                    alert('Vul een geldig inschrijfbedrag voor niet-leden in (minimaal 0 euro, maximaal 2 decimalen)');
+                    return;
+                }
 
                 fetch('/php/activiteiten.php', {
                     method: 'PUT',
@@ -827,7 +851,9 @@ function editActiviteit(activityId) {
                         stop_hour: stopHour,
                         place,
                         comment,
-                        info
+                        info,
+                        inschrijving_bedrag: inschrijvingBedrag,
+                        inschrijving_bedrag_nl: inschrijvingBedragNl
                     })
                 })
                     .then(response => response.json())
@@ -877,6 +903,8 @@ function copyActiviteit(activityId) {
             document.getElementById('new-act-place').value = activity.place || '';
             document.getElementById('new-act-comment').value = activity.comment;
             document.getElementById('new-act-info').value = activity.info || '';
+            document.getElementById('new-act-inschrijvingen-bedrag').value = activity.inschrijving_bedrag || '0';
+            document.getElementById('new-act-inschrijvingen-bedrag-nl').value = activity.inschrijving_bedrag_nl || '0';
 
             // Make sure form is in add mode
             const form = document.getElementById('add-activiteit-form');
@@ -1091,7 +1119,7 @@ function displayInschrijvingenTable(data) {
     // Bereken totalen voor kolommen die beginnen met "aantal"
     const totals = {};
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;
@@ -1102,8 +1130,16 @@ function displayInschrijvingenTable(data) {
 
     // Maak tabel
     let html = '<table class="users-table"><thead><tr>';
+    const columnLabels = {
+        kort: 'Leden korte toer',
+        lang: 'Leden lange toer',
+        kort_nl: 'Niet-leden korte toer',
+        lang_nl: 'Niet-leden lange toer',
+        leden: 'Leden',
+        niet_leden: 'Niet-leden'
+    };
     visibleKolommen.forEach(col => {
-        html += `<th>${col}</th>`;
+        html += `<th>${columnLabels[col] || col}</th>`;
     });
     if (canEdit) html += '<th>Actie</th>';
     html += '</tr></thead><tbody>';
@@ -1229,7 +1265,7 @@ function exportToExcel() {
     const totals = {};
     let hasTotals = false;
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;

@@ -4,6 +4,13 @@ import SidebarLeft from '../sidebarleft';
 
 describe('SidebarLeft registration buttons', () => {
   beforeEach(() => {
+    const today = new Date();
+    const dateOffset = (days) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + days);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([
@@ -11,15 +18,27 @@ describe('SidebarLeft registration buttons', () => {
           id: 10,
           name: 'Open activiteit',
           inschrijving: 1,
-          inschrijvingen_start: '2999-01-01',
-          inschrijvingen_end: '2999-12-31'
+          inschrijvingen_start: dateOffset(-1),
+          inschrijvingen_end: dateOffset(1)
         },
         {
           id: 11,
           name: 'Verlopen inschrijving',
           inschrijving: 1,
-          inschrijvingen_start: '2000-01-01',
-          inschrijvingen_end: '2000-12-31'
+          inschrijvingen_start: dateOffset(-10),
+          inschrijvingen_end: dateOffset(-1)
+        },
+        {
+          id: 14,
+          name: 'Toekomstige inschrijving',
+          inschrijving: 1,
+          inschrijvingen_start: dateOffset(1),
+          inschrijvingen_end: dateOffset(10)
+        },
+        {
+          id: 15,
+          name: 'Inschrijving zonder datums',
+          inschrijving: 1
         },
         {
           id: 12,
@@ -35,12 +54,14 @@ describe('SidebarLeft registration buttons', () => {
     global.fetch = undefined;
   });
 
-  test('shows the heading and buttons for activities marked active in the calendar', async () => {
+  test('shows registration buttons only within their registration dates', async () => {
     render(<SidebarLeft />);
 
     expect(await screen.findByRole('heading', { name: 'Inschrijvingen' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open activiteit' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Verlopen inschrijving' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verlopen inschrijving' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Toekomstige inschrijving' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inschrijving zonder datums' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Geen inschrijving' })).toBeNull();
   });
 
@@ -62,8 +83,16 @@ describe('SidebarLeft registration buttons', () => {
         id: 13,
         name: 'Smakelijk Wandelen',
         inschrijving: 1,
-        inschrijvingen_start: '2999-01-01',
-        inschrijvingen_end: '2999-12-31'
+        inschrijvingen_start: (() => {
+          const date = new Date();
+          date.setDate(date.getDate() - 1);
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        })(),
+        inschrijvingen_end: (() => {
+          const date = new Date();
+          date.setDate(date.getDate() + 1);
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        })()
       }])
     });
     render(<SidebarLeft />);

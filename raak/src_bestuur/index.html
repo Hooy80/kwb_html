@@ -230,10 +230,19 @@
                   </label>
                 </div>
                 <div id="new-act-inschrijvingen-fields">
+                  <div class="form-group">
+                    <label for="new-act-inschrijvingen-bedrag">Inschrijfbedrag (EUR)</label>
+                    <input type="number" id="new-act-inschrijvingen-bedrag" min="0" max="999999999.99" step="0.01" value="0" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-act-inschrijvingen-bedrag-nl">Inschrijfbedrag niet-leden (EUR)</label>
+                    <input type="number" id="new-act-inschrijvingen-bedrag-nl" min="0" max="999999999.99" step="0.01" value="0" required />
+                  </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label for="new-act-inschrijvingen-aantal">Maximumaantal inschrijvingen *</label>
-                      <input type="number" id="new-act-inschrijvingen-aantal" min="1" step="1" required disabled />
+                      <label for="new-act-inschrijvingen-aantal">Maximumaantal inschrijvingen</label>
+                      <input type="number" id="new-act-inschrijvingen-aantal" min="0" step="1" disabled />
+                      <small>Laat leeg of vul 0 in voor onbeperkt aantal inschrijvingen.</small>
                     </div>
                     <div class="form-group">
                       <label for="new-act-inschrijvingen-start">Startdatum inschrijvingen *</label>
@@ -396,7 +405,7 @@
       console.log('=== BESTUUR PAGE LOADED ===');
       console.log('login-form element:', document.getElementById('login-form'));
     </script>
-    <script src="/bestuur/App.js?v=20261017-qr1"></script>
+    <script src="/bestuur/App.js?v=20261018-betaling2"></script>
     <script>
       // Test of App.js geladen is
       setTimeout(function () {

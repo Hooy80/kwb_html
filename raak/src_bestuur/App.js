@@ -329,7 +329,7 @@ async function loadInschrijvingenStats() {
                     );
 
                     visibleKolommen.forEach(col => {
-                        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+                        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
                             dataResult.data.forEach(row => {
                                 const value = parseInt(row[col]) || 0;
                                 totalInschrijvingen += value;
@@ -752,7 +752,7 @@ function toggleInschrijvingenFields() {
     aantal.disabled = !enabled;
     start.disabled = !enabled;
     end.disabled = !enabled;
-    aantal.required = enabled;
+    aantal.required = false;
     start.required = enabled;
     end.required = enabled;
 
@@ -765,18 +765,32 @@ function toggleInschrijvingenFields() {
 
 function getInschrijvingenFormData() {
     const enabled = document.getElementById('new-act-inschrijvingen').checked;
+    const bedrag = document.getElementById('new-act-inschrijvingen-bedrag').value;
+    const bedragNl = document.getElementById('new-act-inschrijvingen-bedrag-nl').value;
     const aantal = document.getElementById('new-act-inschrijvingen-aantal').value;
     const start = document.getElementById('new-act-inschrijvingen-start').value;
     const end = document.getElementById('new-act-inschrijvingen-end').value;
 
-    if (enabled && (!aantal || Number(aantal) < 1 || !Number.isInteger(Number(aantal)) || !start || !end || end < start)) {
-        alert('Vul een geldig maximumaantal en een geldige start- en einddatum voor de inschrijvingen in');
+    if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(bedrag)) {
+        alert('Vul een geldig inschrijfbedrag in (minimaal 0 euro, maximaal 2 decimalen)');
+        return null;
+    }
+    if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(bedragNl)) {
+        alert('Vul een geldig inschrijfbedrag voor niet-leden in (minimaal 0 euro, maximaal 2 decimalen)');
+        return null;
+    }
+
+    const maximumAantal = aantal === '' ? 0 : Number(aantal);
+    if (enabled && (!Number.isInteger(maximumAantal) || maximumAantal < 0 || !start || !end || end < start)) {
+        alert('Vul een geldig maximumaantal (0 of leeg voor onbeperkt) en een geldige start- en einddatum voor de inschrijvingen in');
         return null;
     }
 
     return {
+        inschrijving_bedrag: bedrag,
+        inschrijving_bedrag_nl: bedragNl,
         inschrijvingen: enabled ? 1 : 0,
-        inschrijvingen_aantal: enabled ? Number(aantal) : null,
+        inschrijvingen_aantal: enabled ? maximumAantal : null,
         inschrijvingen_start: enabled ? start : null,
         inschrijvingen_end: enabled ? end : null
     };
@@ -855,6 +869,8 @@ function editActiviteit(activityId) {
             document.getElementById('new-act-comment').value = activity.comment || '';
             document.getElementById('new-act-info').value = activity.info || '';
             document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
+            document.getElementById('new-act-inschrijvingen-bedrag').value = activity.inschrijving_bedrag || '0';
+            document.getElementById('new-act-inschrijvingen-bedrag-nl').value = activity.inschrijving_bedrag_nl || '0';
             document.getElementById('new-act-inschrijvingen').checked = Number(activity.inschrijvingen) === 1;
             document.getElementById('new-act-inschrijvingen-aantal').value = activity.inschrijvingen_aantal || '';
             document.getElementById('new-act-inschrijvingen-start').value = activity.inschrijvingen_start || '';
@@ -942,6 +958,8 @@ function copyActiviteit(activityId) {
             document.getElementById('new-act-comment').value = activity.comment || '';
             document.getElementById('new-act-info').value = activity.info || '';
             document.getElementById('new-act-verantwoordelijke').value = activity.verantwoordelijke || '';
+            document.getElementById('new-act-inschrijvingen-bedrag').value = activity.inschrijving_bedrag || '0';
+            document.getElementById('new-act-inschrijvingen-bedrag-nl').value = activity.inschrijving_bedrag_nl || '0';
             document.getElementById('new-act-inschrijvingen').checked = Number(activity.inschrijvingen) === 1;
             document.getElementById('new-act-inschrijvingen-aantal').value = activity.inschrijvingen_aantal || '';
             document.getElementById('new-act-inschrijvingen-start').value = activity.inschrijvingen_start || '';
@@ -1109,8 +1127,9 @@ function displayInschrijvingenTable(data) {
     formLink.onclick = null;
     formLink.style.display = isGenericRegistration && (!data.inschrijving || !data.is_open || data.is_full) ? 'none' : 'inline-block';
 
+    const maximumAantal = Number(data.inschrijvingen_aantal);
     const registrationSummary = isGenericRegistration
-        ? `<p><strong>Ingeschreven:</strong> ${data.registered_count} / ${data.inschrijvingen_aantal} personen${!data.is_open ? ' — inschrijvingen gesloten' : data.is_full ? ' — maximum bereikt' : ''}</p>`
+        ? `<p><strong>Ingeschreven:</strong> ${data.registered_count}${maximumAantal > 0 ? ` / ${maximumAantal}` : ''} personen${!data.is_open ? ' — inschrijvingen gesloten' : data.is_full ? ' — maximum bereikt' : ''}</p>`
         : '';
 
     if (!data.data || data.data.length === 0) {
@@ -1121,6 +1140,9 @@ function displayInschrijvingenTable(data) {
     // Check of gebruiker mag bewerken
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
     const canEdit = currentUser.functie === 'admin' || currentUser.functie === 'bestuur';
+    const canManageDroppingPayments = currentUser.functie === 'inschrijving' &&
+        data.is_tiered_registration && data.payment_required &&
+        data.kolommen.includes('betaling_ok');
 
     // Filter kolommen: verberg id en id_act maar bewaar ze in de data
     const visibleKolommen = data.kolommen.filter(col =>
@@ -1130,7 +1152,7 @@ function displayInschrijvingenTable(data) {
     // Bereken totalen voor kolommen die beginnen met "aantal"
     const totals = {};
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;
@@ -1142,7 +1164,18 @@ function displayInschrijvingenTable(data) {
     // Maak tabel
     let html = '<table class="users-table"><thead><tr>';
     visibleKolommen.forEach(col => {
-        html += `<th>${col}</th>`;
+        const labels = {
+            betaling_ok: 'Betaling ontvangen',
+            mededeling: 'Mededeling',
+            kort: 'Leden korte toer',
+            lang: 'Leden lange toer',
+            kort_nl: 'Niet-leden korte toer',
+            lang_nl: 'Niet-leden lange toer',
+            leden: 'Leden',
+            niet_leden: 'Niet-leden'
+        };
+        const label = labels[col] || col;
+        html += `<th>${escapeHtml(label)}</th>`;
     });
     if (canEdit) html += '<th>Actie</th>';
     html += '</tr></thead><tbody>';
@@ -1151,7 +1184,14 @@ function displayInschrijvingenTable(data) {
     data.data.forEach(row => {
         html += '<tr>';
         visibleKolommen.forEach(col => {
-            html += `<td>${escapeHtml(row[col] || '-')}</td>`;
+            if (canManageDroppingPayments && col === 'betaling_ok' && row.id) {
+                html += `<td><input type="checkbox" aria-label="Betaling ontvangen voor ${escapeHtml(row.name || 'inschrijving')}" ${Number(row[col]) === 1 ? 'checked' : ''} onchange="updateDroppingPayment(${Number(row.id)}, this)"></td>`;
+            } else if (currentUser.functie === 'inschrijving' && data.is_tiered_registration && col === 'betaling_ok') {
+                html += '<td>Niet nodig</td>';
+            } else {
+                const value = row[col];
+                html += `<td>${value === null || value === undefined || value === '' ? '-' : escapeHtml(value)}</td>`;
+            }
         });
         if (canEdit && row.id) {
             html += '<td>';
@@ -1191,6 +1231,43 @@ function displayInschrijvingenTable(data) {
     }
 
     container.innerHTML = registrationSummary + html;
+}
+
+function updateDroppingPayment(inschrijvingId, checkbox) {
+    if (!currentInschrijvingenData) return;
+
+    const inschrijving = currentInschrijvingenData.data.find(row => Number(row.id) === inschrijvingId);
+    if (!inschrijving) return;
+
+    const previousValue = inschrijving.betaling_ok;
+    checkbox.disabled = true;
+    fetch('/php/inschrijvingen.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: inschrijvingId,
+            tabel: currentInschrijvingenData.tabel,
+            data: { betaling_ok: checkbox.checked }
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Betaalstatus bijwerken mislukt');
+            }
+            inschrijving.betaling_ok = checkbox.checked ? 1 : 0;
+            if (data.email_sent === false) {
+                alert(data.email_error || 'De betaalstatus is opgeslagen, maar de bevestigingsmail kon niet worden verstuurd.');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating dropping payment status:', error);
+            checkbox.checked = Number(previousValue) === 1;
+            alert(`Fout bij bijwerken betaalstatus: ${error.message}`);
+        })
+        .finally(() => {
+            checkbox.disabled = false;
+        });
 }
 
 function getInschrijvingFormUrl(activityId) {
@@ -1268,7 +1345,7 @@ function exportToExcel() {
     const totals = {};
     let hasTotals = false;
     visibleKolommen.forEach(col => {
-        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang'].includes(col.toLowerCase())) {
+        if (col.toLowerCase().startsWith('aantal') || ['kort', 'lang', 'kort_nl', 'lang_nl', 'leden', 'niet_leden'].includes(col.toLowerCase())) {
             totals[col] = 0;
             data.data.forEach(row => {
                 const value = parseInt(row[col]) || 0;
@@ -1356,7 +1433,11 @@ function editInschrijving(inschrijvingId) {
     editableKolommen.forEach(col => {
         formHtml += `<div class="form-group">`;
         formHtml += `<label for="edit-${col}">${col}</label>`;
-        formHtml += `<input type="text" id="edit-${col}" value="${inschrijving[col] || ''}" />`;
+        if (col === 'betaling_ok') {
+            formHtml += `<input type="checkbox" id="edit-${col}" ${Number(inschrijving[col]) === 1 ? 'checked' : ''} />`;
+        } else {
+            formHtml += `<input type="text" id="edit-${col}" value="${inschrijving[col] || ''}" />`;
+        }
         formHtml += `</div>`;
     });
 
@@ -1379,7 +1460,8 @@ function editInschrijving(inschrijvingId) {
 
         const updatedData = {};
         editableKolommen.forEach(col => {
-            updatedData[col] = document.getElementById(`edit-${col}`).value;
+            const field = document.getElementById(`edit-${col}`);
+            updatedData[col] = col === 'betaling_ok' ? field.checked : field.value;
         });
 
         fetch('/php/inschrijvingen.php', {
@@ -1395,6 +1477,9 @@ function editInschrijving(inschrijvingId) {
             .then(data => {
                 if (data.success) {
                     alert('Inschrijving bijgewerkt!');
+                    if (data.email_sent === false) {
+                        alert(data.email_error || 'De betaalstatus is opgeslagen, maar de bevestigingsmail kon niet worden verstuurd.');
+                    }
                     closeEditModal();
                     // Herlaad data
                     const activityId = document.getElementById('inschrijving-select').value;

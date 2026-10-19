@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react';
 
+function isRegistrationOpen(activity, today = new Date()) {
+  const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const startDate = activity.inschrijvingen_start;
+  const endDate = activity.inschrijvingen_end;
+  const hasStartDate = startDate && startDate !== '0000-00-00';
+  const hasEndDate = endDate && endDate !== '0000-00-00';
+
+  return Boolean(hasStartDate && hasEndDate && todayDate >= startDate && todayDate <= endDate);
+}
+
 function getOpenRegistrationActivities(activities) {
-  return activities.filter((activity) => Number(activity.inschrijving) === 1);
+  return activities.filter((activity) =>
+    Number(activity.inschrijving) === 1 && isRegistrationOpen(activity)
+  );
 }
 
 function SidebarLeft() {

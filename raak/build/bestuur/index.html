@@ -223,6 +223,14 @@
                   <label for="new-act-verantwoordelijke">Verantwoordelijke</label>
                   <input type="text" id="new-act-verantwoordelijke" />
                 </div>
+                <div class="form-group">
+                  <label for="new-act-inschrijvingen-bedrag">Inschrijfbedrag (EUR)</label>
+                  <input type="number" id="new-act-inschrijvingen-bedrag" min="0" max="999999999.99" step="0.01" value="0" required />
+                </div>
+                <div class="form-group">
+                  <label for="new-act-inschrijvingen-bedrag-nl">Inschrijfbedrag niet-leden (EUR)</label>
+                  <input type="number" id="new-act-inschrijvingen-bedrag-nl" min="0" max="999999999.99" step="0.01" value="0" required />
+                </div>
                 <button type="submit" class="btn-primary">Activiteit Toevoegen</button>
               </form>
             </div>
@@ -374,7 +382,7 @@
       console.log('=== BESTUUR PAGE LOADED ===');
       console.log('login-form element:', document.getElementById('login-form'));
     </script>
-    <script src="/bestuur/App.js?v=20261017-qr1"></script>
+    <script src="/bestuur/App.js?v=20261018-bedrag1"></script>
     <script>
       // Test of App.js geladen is
       setTimeout(function () {

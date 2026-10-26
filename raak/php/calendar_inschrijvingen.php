@@ -72,6 +72,11 @@ function createSepaPaymentDetails(array $activity, int $people): ?array
     ];
 }
 
+function isVerenigingenkwisActivity(array $activity): bool
+{
+    return stripos((string)$activity['name'], 'verenigingenkwis') !== false;
+}
+
 function isDroppingActivity(array $activity): bool
 {
     return stripos((string)$activity['name'], 'dropping') !== false;
@@ -215,6 +220,7 @@ function renderRegistrationPage(?array $activity, array $availability, string $m
 {
     $isDropping = $activity !== null && isDroppingActivity($activity);
     $isSmakelijkWandelen = $activity !== null && isSmakelijkWandelenActivity($activity);
+    $isVerenigingenkwis = $activity !== null && isVerenigingenkwisActivity($activity);
     $title = $activity ? $activity['name'] : 'Inschrijven';
     $activityDate = $activity ? date('d/m/Y', strtotime($activity['date'])) : '';
     $comment = $activity ? trim((string)$activity['comment']) : '';
@@ -308,6 +314,9 @@ function renderRegistrationPage(?array $activity, array $availability, string $m
                   <input id="mail" name="mail" type="checkbox" value="1" required style="width:auto;" <?= !empty($values['mail']) ? 'checked' : '' ?>>
                   Ik ga akkoord met de <a href="/alg_vw_smak.html" target="_blank" rel="noopener noreferrer">algemene voorwaarden</a>.
                 </label>
+              <?php if ($isVerenigingenkwis): ?>
+                <label for="ploegnaam">Ploegnaam</label>
+                <input id="ploegnaam" name="ploegnaam" type="text" maxlength="254" required autocomplete="ploegnaam" value="<?= escapeHtml($values['ploegnaam'] ?? '') ?>">
               <?php else: ?>
                 <label for="aantal_personen">Aantal personen</label>
                 <input id="aantal_personen" name="aantal_personen" type="number" min="1" max="<?= (int)($availability['capacity'] - $availability['registered']) ?>" step="1" required value="<?= escapeHtml($values['aantal_personen'] ?? '1') ?>">
@@ -349,6 +358,7 @@ $values = [
     'aantal_vegi' => trim((string)($_POST['aantal_vegi'] ?? '0')),
     'opmerking' => trim((string)($_POST['opmerking'] ?? '')),
     'mail' => isset($_POST['mail']) ? '1' : '',
+    'ploegnaam' => trim((string)($_POST['ploegnaam'] ?? '')),
     'info' => trim((string)($_POST['info'] ?? ''))
 ];
 
@@ -356,6 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $naam = trim((string)($_POST['naam'] ?? ''));
     $email = trim((string)($_POST['email'] ?? ''));
     $info = trim((string)($_POST['info'] ?? ''));
+    $ploegnaam = trim((string)($_POST['ploegnaam'] ?? ''));
     $isDropping = isDroppingActivity($activity);
     $isSmakelijkWandelen = isSmakelijkWandelenActivity($activity);
     $kort = filter_var($_POST['kort'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
@@ -437,6 +448,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'lang' => $lang,
                 'info' => $info
             ]);
+        } elseif (isVerenigingenkwisActivity($lockedActivity)) {
+            $registrationStage = 'save verenigingenkwis registration';
+            $insert = $pdo->prepare('INSERT INTO verenigingenkwis (id_act, name, email, ploegnaam) VALUES (:id_act, :name, :email, :ploegnaam)');
+            $insert->execute([
+                'id_act' => $lockedActivity['id'],
+                'name' => $naam,
+                'email' => $email,
+                'ploegnaam' => $ploegnaam
         } elseif (isSmakelijkWandelenActivity($lockedActivity)) {
             $registrationStage = 'save Smakelijk Wandelen registration';
             insertActivityRegistration($pdo, 'smakelijk_wandelen', [
@@ -513,6 +532,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $confirmationBody .= "Je inschrijving voor {$safeActivityName} op {$activityDate} is ontvangen.\n";
         if ($isDropping) {
             $confirmationBody .= "Korte toer: {$kort}\nLange toer: {$lang}\n";
+        } elseif ($isVerenigingenkwis) {
+            $confirmationBody .= "Ploegnaam: {$ploegnaam}\n";
         } elseif ($isSmakelijkWandelen) {
             $confirmationBody .= "Aantal personen: {$aantalPersonen}\nAantal vegetarisch: {$aantalVegi}\n";
             if ($opmerking !== '') {
